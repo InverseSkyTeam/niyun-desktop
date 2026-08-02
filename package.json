@@ -1,0 +1,35 @@
+{
+    "name": "niyun-desktop",
+    "version": "0.1.0",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "dev": "vite",
+        "build": "vue-tsc --noEmit && vite build",
+        "preview": "vite preview",
+        "tauri": "tauri",
+        "fmt": "oxfmt"
+    },
+    "dependencies": {
+        "@ai-sdk/anthropic": "^4.0.27",
+        "@ai-sdk/deepseek": "^3.0.19",
+        "@ai-sdk/moonshotai": "^3.0.23",
+        "@ai-sdk/openai": "^4.0.27",
+        "@tailwindcss/vite": "^4.3.3",
+        "@tauri-apps/api": "^2",
+        "@tauri-apps/plugin-opener": "^2",
+        "@tauri-apps/plugin-sql": "^2.4.0",
+        "ai": "^7.0.48",
+        "tailwindcss": "^4.3.3",
+        "vue": "^3.5.40",
+        "zhipu-ai-provider": "^0.4.0"
+    },
+    "devDependencies": {
+        "@tauri-apps/cli": "^2",
+        "@vitejs/plugin-vue": "^6.0.8",
+        "oxfmt": "^0.61.0",
+        "typescript": "^5.9.0",
+        "vite": "^8.2.0",
+        "vue-tsc": "^3.3.9"
+    }
+}

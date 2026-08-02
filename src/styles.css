@@ -1,0 +1,106 @@
+@import "tailwindcss";
+
+/* 基于类名的暗色模式（由 .dark 切换） */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* 极简设计系统 — 单色冷调品牌色阶 */
+@theme {
+    --font-sans:
+        "MapleMonoCN", "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+    --font-mono:
+        "MapleMonoCN", "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+
+    --color-brand-50: #fafafa;
+    --color-brand-100: #f4f4f5;
+    --color-brand-200: #e4e4e7;
+    --color-brand-300: #d4d4d8;
+    --color-brand-400: #a1a1aa;
+    --color-brand-500: #71717a;
+    --color-brand-600: #52525b;
+    --color-brand-700: #3f3f46;
+    --color-brand-800: #27272a;
+    --color-brand-900: #18181b;
+    --color-brand-950: #09090b;
+}
+
+@font-face {
+    font-family: "MapleMonoCN";
+    src: url("/font.ttf") format("truetype");
+    font-display: swap;
+}
+
+:root {
+    color-scheme: light;
+}
+.dark {
+    color-scheme: dark;
+}
+
+html,
+body,
+#app {
+    height: 100%;
+}
+
+body {
+    margin: 0;
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+}
+
+/* 极简风格自定义滚动条 */
+.scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+    background: var(--color-brand-300);
+    border-radius: 999px;
+}
+.dark .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: var(--color-brand-700);
+}
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: var(--color-brand-400);
+}
+
+/* 消息正文基础排版（保留给后续接入 markdown 渲染器） */
+.msg-content {
+    line-height: 1.65;
+    overflow-wrap: anywhere;
+}
+.msg-content > * + * {
+    margin-top: 0.5rem;
+}
+
+/* 动画：思考中的脉冲圆点 */
+@keyframes blink {
+    0%,
+    80%,
+    100% {
+        opacity: 0.2;
+    }
+    40% {
+        opacity: 1;
+    }
+}
+.think-dot {
+    animation: blink 1.4s infinite both;
+}
+.think-dot:nth-child(2) {
+    animation-delay: 0.2s;
+}
+.think-dot:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+/* Tauri 拖拽区域禁用文字选择 */
+[data-tauri-drag-region] {
+    -webkit-user-select: none;
+    user-select: none;
+}

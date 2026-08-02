@@ -1,0 +1,10 @@
+{
+    "tabWidth": 4,
+    "printWidth": 80,
+    "experimentalTailwindcss": {
+        "stylesheet": "./src/styles.css",
+        "attributes": ["class", "className"],
+        "functions": ["clsx", "cn"],
+        "preserveWhitespace": true
+    }
+}
