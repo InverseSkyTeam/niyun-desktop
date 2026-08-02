@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { emit, listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type { ChatMessage, Conversation } from "./types";
 import { loadAIConfig, saveAIConfig, generateReply } from "./ai";
 import {
@@ -13,11 +15,29 @@ import {
     touchConversation,
     getSystemPrompt,
 } from "./db";
+import { loadStats, saveStats, applyDecay, feed as petFeed, chatBoost, petBoost, type PetStats } from "./petState";
+import { fetchWeather, type WeatherCG } from "./weather";
+import { getDesktopInfo, desktopInfoToPrompt } from "./desktopInfo";
 import Sidebar from "./components/Sidebar.vue";
 import TitleBar from "./components/TitleBar.vue";
 import MessageList from "./components/MessageList.vue";
 import ChatInput from "./components/ChatInput.vue";
 import Settings from "./components/Settings.vue";
+import PetOverlay from "./components/PetOverlay.vue";
+import GalgameView from "./components/GalgameView.vue";
+
+const isPetView = new URLSearchParams(window.location.search).get("view") === "pet";
+
+type Mood = "neutral" | "happy" | "shy" | "angry" | "sleepy";
+
+function parseMood(text: string): Mood {
+    const t = text.toLowerCase();
+    if (t.includes(">w<") || t.includes("≧ω≦") || t.includes("(=＾･＾=)")) return "happy";
+    if (text.includes("脸红") || text.includes("害羞") || text.includes(">//<") || text.includes("(但其实")) return "shy";
+    if (text.includes("炸毛") || text.includes("怒") || text.includes("气死") || text.includes("哼") || t.includes(">_<") || t.includes("angry")) return "angry";
+    if (text.includes("困") || text.includes("睡") || text.includes("累") || t.includes("zzz")) return "sleepy";
+    return "neutral";
+}
 
 const appWindow = (() => {
     try {
@@ -33,7 +53,132 @@ const activeId = ref<string | null>(null);
 const messages = ref<ChatMessage[]>([]);
 const input = ref("");
 const isThinking = ref(false);
-const view = ref<"chat" | "settings">("chat");
+const view = ref<"chat" | "settings" | "galgame">("chat");
+
+const petMood = ref<Mood>("neutral");
+const petStats = ref<PetStats>(loadStats());
+const isSleeping = ref(false);
+const eating = ref(false);
+const weatherCG = ref<WeatherCG | null>(null);
+const reminderEnabled = ref(localStorage.getItem("reminder-enabled") !== "false");
+const reminderInterval = ref(parseInt(localStorage.getItem("reminder-interval") || "45"));
+
+let moodTimer: ReturnType<typeof setTimeout> | undefined;
+let decayTimer: ReturnType<typeof setInterval> | undefined;
+let sleepTimer: ReturnType<typeof setInterval> | undefined;
+let idleTimer: ReturnType<typeof setTimeout> | undefined;
+let weatherTimer: ReturnType<typeof setInterval> | undefined;
+let reminderTimer: ReturnType<typeof setInterval> | undefined;
+let feedCooldown = false;
+
+function setMood(m: Mood) {
+    petMood.value = m;
+    if (moodTimer) clearTimeout(moodTimer);
+    if (m !== "neutral") {
+        moodTimer = setTimeout(() => { petMood.value = "neutral"; }, 3000);
+    }
+}
+
+function wakeUp() {
+    isSleeping.value = false;
+    if (idleTimer) clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => { checkSleep(); }, 5 * 60 * 1000);
+}
+
+function checkSleep() {
+    const h = new Date().getHours();
+    if (h >= 22 || h < 7) {
+        isSleeping.value = true;
+    } else {
+        isSleeping.value = false;
+    }
+}
+
+function handleFeed() {
+    if (feedCooldown) return;
+    feedCooldown = true;
+    setTimeout(() => { feedCooldown = false; }, 30000);
+    petStats.value = petFeed(petStats.value);
+    saveStats(petStats.value);
+    eating.value = true;
+    setMood("happy");
+    setTimeout(() => { eating.value = false; }, 4000);
+    wakeUp();
+}
+
+function handlePet() {
+    petStats.value = petBoost(petStats.value);
+    saveStats(petStats.value);
+    setMood("shy");
+    wakeUp();
+}
+
+async function handlePeek() {
+    try {
+        const info = await getDesktopInfo();
+        const prompt = desktopInfoToPrompt(info);
+        const systemPrompt = await getSystemPrompt(activeId.value || "");
+        const reply = await generateReply(
+            `${prompt}\n\n[请用傲娇的语气吐槽用户现在在做什么，50字以内]`,
+            activeModel.value,
+            systemPrompt
+        );
+        const userMsg: ChatMessage = {
+            id: uid(),
+            role: "user",
+            content: "（偷看屏幕）",
+            createdAt: Date.now(),
+        };
+        messages.value.push(userMsg);
+        if (activeId.value) await addMessage(activeId.value, userMsg);
+        const aiMsg: ChatMessage = {
+            id: uid(),
+            role: "assistant",
+            content: reply,
+            createdAt: Date.now(),
+        };
+        messages.value.push(aiMsg);
+        if (activeId.value) await addMessage(activeId.value, aiMsg);
+        setMood(parseMood(reply));
+        wakeUp();
+    } catch (err) {
+        console.error(err);
+    }
+}
+
+function handleGalgameEffect(payload: { moodDelta: number; hungerDelta: number }) {
+    petStats.value = {
+        ...petStats.value,
+        mood: Math.max(0, Math.min(100, petStats.value.mood + payload.moodDelta)),
+        hunger: Math.max(0, Math.min(100, petStats.value.hunger + payload.hungerDelta)),
+    };
+    saveStats(petStats.value);
+}
+
+function startReminder() {
+    if (reminderTimer) clearInterval(reminderTimer);
+    if (!reminderEnabled.value) return;
+    const ms = reminderInterval.value * 60 * 1000;
+    reminderTimer = setInterval(() => {
+        const reminders = ["该喝水啦！起来倒杯水吧~", "坐太久啦，站起来活动活动！", "眼睛累了？看看远处休息一下~", "别忘了伸展一下身体哦！"];
+        const msg = reminders[Math.floor(Math.random() * reminders.length)];
+        const m: ChatMessage = {
+            id: uid(),
+            role: "assistant",
+            content: msg,
+            createdAt: Date.now(),
+        };
+        messages.value.push(m);
+        if (activeId.value) addMessage(activeId.value, m);
+        setMood("happy");
+    }, ms);
+}
+
+function refreshReminder() {
+    reminderEnabled.value = localStorage.getItem("reminder-enabled") !== "false";
+    reminderInterval.value = parseInt(localStorage.getItem("reminder-interval") || "45");
+    startReminder();
+}
 
 const aiConfig = ref(loadAIConfig());
 const activeModel = ref(aiConfig.value.activeModel);
@@ -209,6 +354,7 @@ async function sendMessage() {
     if (!activeId.value) {
         await newConversation();
     }
+    const convId = activeId.value!;
 
     input.value = "";
 
@@ -219,13 +365,13 @@ async function sendMessage() {
         createdAt: Date.now(),
     };
     messages.value.push(userMsg);
-    await addMessage(activeId.value, userMsg);
+    await addMessage(convId, userMsg);
 
     if (messages.value.filter((m) => m.role === "user").length === 1) {
-        const conv = conversations.value.find((c) => c.id === activeId.value);
+        const conv = conversations.value.find((c) => c.id === convId);
         if (conv) {
             conv.title = text.slice(0, 18);
-            await touchConversation(activeId.value);
+            await touchConversation(convId);
         }
     }
 
@@ -238,11 +384,11 @@ async function sendMessage() {
         pending: true,
     };
     messages.value.push(pendingMsg);
-    await addMessage(activeId.value, pendingMsg);
+    await addMessage(convId, pendingMsg);
 
     isThinking.value = true;
     try {
-        const systemPrompt = await getSystemPrompt(activeId.value);
+        const systemPrompt = await getSystemPrompt(convId);
         const reply = await generateReply(text, activeModel.value, systemPrompt);
         const target = messages.value.find((m) => m.id === pendingId);
         if (target) {
@@ -250,6 +396,10 @@ async function sendMessage() {
             target.pending = false;
         }
         await updateMessage(pendingId, reply);
+        setMood(parseMood(reply));
+        petStats.value = chatBoost(petStats.value);
+        saveStats(petStats.value);
+        wakeUp();
     } catch (err) {
         const target = messages.value.find((m) => m.id === pendingId);
         if (target) {
@@ -283,10 +433,6 @@ async function copyMessage(id: string) {
     }
 }
 
-async function fetchAIReply(prompt: string, systemPrompt: string): Promise<string> {
-    return generateReply(prompt, activeModel.value, systemPrompt);
-}
-
 function selectModel(m: string) {
     activeModel.value = m;
     const config = loadAIConfig();
@@ -315,11 +461,15 @@ function windowClose() {
 function openSettings() {
     view.value = "settings";
 }
+function openGalgame() {
+    view.value = "galgame";
+}
 function backToChat() {
     view.value = "chat";
     const config = loadAIConfig();
     aiConfig.value = config;
     activeModel.value = config.activeModel;
+    refreshReminder();
 }
 function setTheme(t: "light" | "dark") {
     theme.value = t;
@@ -327,7 +477,64 @@ function setTheme(t: "light" | "dark") {
     applyTheme();
 }
 
+let petOverlayUnlisten: UnlistenFn | undefined;
+
+function broadcastPetState() {
+    if (isPetView) return;
+    emit("pet-state", {
+        mood: petMood.value,
+        petStats: petStats.value,
+        isSleeping: isSleeping.value,
+        eating: eating.value,
+        weatherCG: weatherCG.value,
+    });
+}
+
+async function openPetOverlay() {
+    if (isPetView) return;
+    const existing = await WebviewWindow.getByLabel("pet");
+    if (existing) {
+        await existing.show();
+        await existing.setFocus();
+        broadcastPetState();
+        return;
+    }
+    new WebviewWindow("pet", {
+        url: "/index.html?view=pet",
+        title: "逆云桌宠",
+        width: 600,
+        height: 600,
+        decorations: false,
+        resizable: false,
+        transparent: true,
+        alwaysOnTop: true,
+        skipTaskbar: true,
+        shadow: false,
+        center: false,
+        x: 80,
+        y: 120,
+    });
+}
+
 onMounted(async () => {
+    if (isPetView) {
+        petOverlayUnlisten = await listen("pet-state", (e) => {
+            const p = e.payload as {
+                mood: Mood;
+                petStats: PetStats;
+                isSleeping: boolean;
+                eating: boolean;
+                weatherCG: WeatherCG | null;
+            };
+            petMood.value = p.mood;
+            petStats.value = p.petStats;
+            isSleeping.value = p.isSleeping;
+            eating.value = p.eating;
+            weatherCG.value = p.weatherCG;
+        });
+        return;
+    }
+
     const stored = localStorage.getItem("pet-theme") as "light" | "dark" | null;
     if (stored) theme.value = stored;
     applyTheme();
@@ -339,11 +546,76 @@ onMounted(async () => {
         activeId.value = first.id;
         messages.value = await dbLoadMessages(first.id);
     }
+
+    petStats.value = applyDecay(petStats.value);
+    saveStats(petStats.value);
+
+    checkSleep();
+    wakeUp();
+
+    decayTimer = setInterval(() => {
+        petStats.value = applyDecay(petStats.value);
+        saveStats(petStats.value);
+    }, 30000);
+
+    sleepTimer = setInterval(() => { checkSleep(); }, 60000);
+
+    try {
+        const snapshot = await fetchWeather();
+        weatherCG.value = snapshot.cg;
+    } catch {}
+
+    weatherTimer = setInterval(async () => {
+        try {
+            const snapshot = await fetchWeather();
+            weatherCG.value = snapshot.cg;
+        } catch {}
+    }, 60 * 60 * 1000);
+
+    startReminder();
+
+    petOverlayUnlisten = await listen("pet-interact", (e) => {
+        const action = e.payload as "feed" | "pet" | "peek";
+        if (action === "feed") handleFeed();
+        else if (action === "pet") handlePet();
+        else if (action === "peek") handlePeek();
+    });
+
+    setTimeout(() => {
+        openPetOverlay();
+        setTimeout(broadcastPetState, 500);
+    }, 1000);
+});
+
+watch([petMood, petStats, isSleeping, eating, weatherCG], () => {
+    broadcastPetState();
+}, { deep: true });
+
+onUnmounted(() => {
+    if (moodTimer) clearTimeout(moodTimer);
+    if (decayTimer) clearInterval(decayTimer);
+    if (sleepTimer) clearInterval(sleepTimer);
+    if (idleTimer) clearTimeout(idleTimer);
+    if (weatherTimer) clearInterval(weatherTimer);
+    if (reminderTimer) clearInterval(reminderTimer);
+    petOverlayUnlisten?.();
 });
 </script>
 
 <template>
+    <PetOverlay
+        v-if="isPetView"
+        :mood="petMood"
+        :pet-stats="petStats"
+        :is-sleeping="isSleeping"
+        :eating="eating"
+        :weather-c-g="weatherCG"
+        @feed="emit('pet-interact', 'feed')"
+        @pet="emit('pet-interact', 'pet')"
+        @peek="emit('pet-interact', 'peek')"
+    />
     <div
+        v-else
         class="flex h-screen w-screen overflow-hidden bg-white font-sans text-brand-900 antialiased dark:bg-brand-900 dark:text-brand-50"
     >
         <template v-if="view === 'chat'">
@@ -354,9 +626,10 @@ onMounted(async () => {
                 @select="openConversation"
                 @delete="removeConversation"
                 @open-settings="openSettings"
+                @open-galgame="openGalgame"
             />
 
-            <div class="flex min-w-0 flex-1 flex-col">
+            <div class="relative flex min-w-0 flex-1 flex-col">
                 <TitleBar
                     :title="
                         conversations.find((c) => c.id === activeId)?.title ??
@@ -386,6 +659,29 @@ onMounted(async () => {
                     @stop="stopGeneration"
                     @select-model="selectModel"
                 />
+            </div>
+        </template>
+
+        <template v-else-if="view === 'galgame'">
+            <Sidebar
+                :conversations="conversations"
+                :active-id="activeId"
+                @new-chat="newConversation"
+                @select="openConversation"
+                @delete="removeConversation"
+                @open-settings="openSettings"
+                @open-galgame="openGalgame"
+            />
+            <div class="flex min-w-0 flex-1 flex-col">
+                <TitleBar
+                    title="视觉小说"
+                    :is-thinking="isThinking"
+                    @toggle-theme="toggleTheme"
+                    @toggle-pin="togglePin"
+                    @window-minimize="windowMinimize"
+                    @window-close="windowClose"
+                />
+                <GalgameView @back="backToChat" @galgame-effect="handleGalgameEffect" />
             </div>
         </template>
 

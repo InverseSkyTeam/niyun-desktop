@@ -19,7 +19,7 @@ const activeSection = ref<"appearance" | "pet" | "ai" | "about">("appearance");
 
 const sections = [
     { id: "appearance" as const, label: "外观", icon: "sun" },
-    { id: "pet" as const, label: "桌宠", icon: "heart" },
+    { id: "pet" as const, label: "桌宠", icon: "paw" },
     { id: "ai" as const, label: "AI", icon: "sparkles" },
     { id: "about" as const, label: "关于", icon: "info" },
 ];
@@ -28,12 +28,27 @@ const fontSize = ref(14);
 const alwaysOnTop = ref(false);
 const autoStart = ref(false);
 const windowOpacity = ref(100);
+const reminderEnabled = ref(
+    localStorage.getItem("reminder-enabled") === "true"
+);
+const reminderInterval = ref(
+    Number(localStorage.getItem("reminder-interval")) || 30
+);
 
 const aiConfig = reactive<AIConfig>(loadAIConfig());
 
 function toggleModel(providerIndex: number, modelIndex: number) {
     aiConfig.providers[providerIndex].models[modelIndex].enabled =
         !aiConfig.providers[providerIndex].models[modelIndex].enabled;
+}
+
+function saveReminderEnabled(v: boolean) {
+    localStorage.setItem("reminder-enabled", String(v));
+}
+
+function setReminderInterval(opt: number) {
+    reminderInterval.value = opt;
+    localStorage.setItem("reminder-interval", String(opt));
 }
 
 function saveSettings() {
@@ -80,7 +95,7 @@ function saveSettings() {
                     />
                 </svg>
                 <svg
-                    v-else-if="s.icon === 'heart'"
+                    v-else-if="s.icon === 'paw'"
                     viewBox="0 0 24 24"
                     class="size-4 shrink-0"
                     fill="none"
@@ -89,8 +104,12 @@ function saveSettings() {
                     stroke-linecap="round"
                     stroke-linejoin="round"
                 >
+                    <circle cx="5.5" cy="11" r="1.5" />
+                    <circle cx="9.5" cy="6.5" r="1.5" />
+                    <circle cx="14.5" cy="6.5" r="1.5" />
+                    <circle cx="18.5" cy="11" r="1.5" />
                     <path
-                        d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
+                        d="M12 12.5c-2.8 0-5 2-5 4.5 0 1.4.9 2.5 2.2 2.5h5.6c1.3 0 2.2-1.1 2.2-2.5 0-2.5-2.2-4.5-5-4.5z"
                     />
                 </svg>
                 <svg
@@ -294,6 +313,38 @@ function saveSettings() {
                             step="5"
                             class="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-brand-200/60 accent-brand-900 dark:bg-brand-700 dark:accent-brand-50"
                         />
+                    </div>
+
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-[13px] font-medium">定时提醒</p>
+                            <p
+                                class="text-[11px] text-brand-500 dark:text-brand-400"
+                            >
+                                每隔一段时间提醒你休息
+                            </p>
+                        </div>
+                        <Switch
+                            v-model="reminderEnabled"
+                            @update:model-value="saveReminderEnabled"
+                        />
+                    </div>
+
+                    <div v-if="reminderEnabled" class="space-y-2">
+                        <label class="text-[13px] font-medium">提醒间隔</label>
+                        <div class="grid grid-cols-5 gap-2">
+                            <Button
+                                v-for="opt in [15, 30, 45, 60, 90] as const"
+                                :key="opt"
+                                variant="outline"
+                                size="sm"
+                                block
+                                :active="reminderInterval === opt"
+                                @click="() => setReminderInterval(opt)"
+                            >
+                                {{ opt }}分
+                            </Button>
+                        </div>
                     </div>
                 </section>
 

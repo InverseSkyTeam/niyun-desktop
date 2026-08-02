@@ -15,6 +15,7 @@
         "@tauri-apps/plugin-sql": "^2.4.0",
         "ai": "^7.0.48",
         "tailwindcss": "^4.3.3",
+        "uapi-browser-sdk": "^0.1.18",
         "vue": "^3.5.40",
         "zhipu-ai-provider": "^0.4.0",
       },
@@ -322,6 +323,8 @@
     "tslib": ["tslib@2.8.1", "https://registry.npmmirror.com/tslib/-/tslib-2.8.1.tgz", {}, "sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w=="],
 
     "typescript": ["typescript@5.9.3", "https://registry.npmmirror.com/typescript/-/typescript-5.9.3.tgz", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
+
+    "uapi-browser-sdk": ["uapi-browser-sdk@0.1.18", "https://registry.npmmirror.com/uapi-browser-sdk/-/uapi-browser-sdk-0.1.18.tgz", {}, "sha512-4rxVQImwBzebb1mBhag7z4NoNqXfpMAEXk1qqTb3whtcTAbzBHAaer4NekDIN5ba/0whCaBEIyNXc9CGMM/zdw=="],
 
     "undici": ["undici@7.29.0", "https://registry.npmmirror.com/undici/-/undici-7.29.0.tgz", {}, "sha512-IDxfleLmmbSskfWSUATiN1nfn2rDuvnMOqb5CWR92iIfojA0Ud+ulOAAEQ57LPr9rWmsreUyf5lwyao+7GNNVw=="],
 

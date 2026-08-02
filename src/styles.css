@@ -1,9 +1,7 @@
 @import "tailwindcss";
 
-/* 基于类名的暗色模式（由 .dark 切换） */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* 极简设计系统 — 单色冷调品牌色阶 */
 @theme {
     --font-sans:
         "MapleMonoCN", "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
@@ -50,7 +48,6 @@ body {
     text-rendering: optimizeLegibility;
 }
 
-/* 极简风格自定义滚动条 */
 .scrollbar-thin::-webkit-scrollbar {
     width: 6px;
     height: 6px;
@@ -69,7 +66,6 @@ body {
     background: var(--color-brand-400);
 }
 
-/* 消息正文基础排版（保留给后续接入 markdown 渲染器） */
 .msg-content {
     line-height: 1.65;
     overflow-wrap: anywhere;
@@ -78,7 +74,50 @@ body {
     margin-top: 0.5rem;
 }
 
-/* 动画：思考中的脉冲圆点 */
+.md-content :first-child { margin-top: 0; }
+.md-content :last-child { margin-bottom: 0; }
+.md-h1 { font-size: 1.3em; font-weight: 700; margin: 0.4em 0 0.2em; }
+.md-h2 { font-size: 1.15em; font-weight: 700; margin: 0.4em 0 0.2em; }
+.md-h3 { font-size: 1em; font-weight: 600; margin: 0.4em 0 0.2em; }
+.md-p { margin: 0.2em 0; }
+.md-quote {
+    border-left: 3px solid var(--color-brand-400);
+    padding-left: 0.6em;
+    margin: 0.3em 0;
+    opacity: 0.85;
+    font-style: italic;
+}
+.md-hr {
+    border: none;
+    border-top: 1px solid var(--color-brand-300);
+    margin: 0.5em 0;
+}
+.dark .md-hr { border-top-color: var(--color-brand-600); }
+.md-ul, .md-ol {
+    margin: 0.3em 0;
+    padding-left: 1.4em;
+}
+.md-ul li { list-style: disc; }
+.md-ol li { list-style: decimal; }
+.md-ul li, .md-ol li {
+    margin: 0.1em 0;
+}
+.md-content code {
+    background: rgba(0, 0, 0, 0.08);
+    padding: 0.1em 0.35em;
+    border-radius: 3px;
+    font-size: 0.88em;
+}
+.dark .md-content code { background: rgba(255, 255, 255, 0.12); }
+.md-content a {
+    color: #4f8cf7;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+.md-content a:hover { opacity: 0.8; }
+.md-content strong { font-weight: 700; }
+.md-content em { font-style: italic; }
+
 @keyframes blink {
     0%,
     80%,
@@ -99,8 +138,120 @@ body {
     animation-delay: 0.4s;
 }
 
-/* Tauri 拖拽区域禁用文字选择 */
 [data-tauri-drag-region] {
     -webkit-user-select: none;
     user-select: none;
+}
+
+@keyframes pet-breathe {
+    0%, 100% { transform: scaleY(1); }
+    50% { transform: scaleY(1.03); }
+}
+
+@keyframes pet-slow-breathe {
+    0%, 100% { transform: rotate(-4deg) scaleY(1); }
+    50% { transform: rotate(-4deg) scaleY(1.02); }
+}
+
+@keyframes pet-bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+@keyframes pet-shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-4px); }
+    75% { transform: translateX(4px); }
+}
+
+@keyframes pet-angry-shake {
+    0%, 100% { transform: translateX(0) rotate(0); }
+    25% { transform: translateX(-3px) rotate(-1.5deg); }
+    75% { transform: translateX(3px) rotate(1.5deg); }
+}
+
+@keyframes float-z {
+    0% { transform: translateY(0) scale(0.6); opacity: 0; }
+    20% { opacity: 1; }
+    80% { opacity: 0.6; }
+    100% { transform: translateY(-30px) scale(1.1); opacity: 0; }
+}
+
+@keyframes shake-icon {
+    0%, 100% { transform: rotate(-8deg) translateY(0); }
+    50% { transform: rotate(8deg) translateY(-3px); }
+}
+
+@keyframes eat-pop {
+    0% { transform: scale(0) rotate(-20deg); opacity: 0; }
+    100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+@keyframes bone-fade {
+    0% { transform: scale(0.5); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes festival-fall {
+    0% { transform: translateY(0) rotate(0deg); opacity: 0; }
+    10% { opacity: 0.9; }
+    90% { opacity: 0.9; }
+    100% { transform: translateY(400px) rotate(360deg); opacity: 0; }
+}
+
+@keyframes weather-fall {
+    0% { transform: translateY(0) translateX(0); opacity: 0; }
+    10% { opacity: 0.9; }
+    100% { transform: translateY(400px) translateX(-8px); opacity: 0; }
+}
+@keyframes weather-fall-slow {
+    0% { transform: translateY(0) translateX(0) rotate(0deg); opacity: 0; }
+    10% { opacity: 0.9; }
+    100% { transform: translateY(400px) translateX(20px) rotate(360deg); opacity: 0; }
+}
+@keyframes weather-fall-fast {
+    0% { transform: translateY(0) translateX(0); opacity: 0; }
+    10% { opacity: 0.9; }
+    100% { transform: translateY(400px) translateX(-20px); opacity: 0; }
+}
+@keyframes weather-drift {
+    0% { transform: translateX(-30px) translateY(0); opacity: 0; }
+    15% { opacity: 0.85; }
+    50% { transform: translateX(40px) translateY(-10px); }
+    85% { opacity: 0.85; }
+    100% { transform: translateX(120px) translateY(0); opacity: 0; }
+}
+@keyframes weather-flash {
+    0% { transform: scale(0.6) translateY(0); opacity: 0; }
+    10% { transform: scale(1.3) translateY(20px); opacity: 1; }
+    30% { transform: scale(1) translateY(50px); opacity: 0.4; }
+    45% { transform: scale(1.2) translateY(90px); opacity: 1; }
+    70% { transform: scale(0.9) translateY(150px); opacity: 0.3; }
+    100% { transform: scale(0.6) translateY(400px); opacity: 0; }
+}
+
+@keyframes walk-bounce {
+    0%, 100% { transform: translateY(0) scaleY(1); }
+    50% { transform: translateY(-4px) scaleY(0.97); }
+}
+
+@keyframes rain-fall {
+    0% { transform: translateY(0) translateX(0); opacity: 0; }
+    10% { opacity: 0.8; }
+    100% { transform: translateY(400px) translateX(-10px); opacity: 0; }
+}
+
+@keyframes overlay-fade-in {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+}
+
+@keyframes blink-cursor {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+}
+
+@keyframes fade-in {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
 }

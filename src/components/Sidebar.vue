@@ -13,17 +13,9 @@ const emit = defineEmits<{
     (e: "select", id: string): void;
     (e: "delete", id: string): void;
     (e: "open-settings"): void;
+    (e: "open-galgame"): void;
 }>();
 
-function relTime(ts: number): string {
-    const diff = Date.now() - ts;
-    const min = Math.floor(diff / 60000);
-    if (min < 1) return "刚刚";
-    if (min < 60) return `${min} 分钟前`;
-    const hr = Math.floor(min / 60);
-    if (hr < 24) return `${hr} 小时前`;
-    return `${Math.floor(hr / 24)} 天前`;
-}
 </script>
 
 <template>
@@ -39,7 +31,7 @@ function relTime(ts: number): string {
             </div>
             <div class="pointer-events-none min-w-0">
                 <p class="truncate text-sm leading-tight font-semibold">
-                    逆云桌宠 学习版
+                    逆云学习版
                 </p>
             </div>
         </div>
@@ -113,6 +105,21 @@ function relTime(ts: number): string {
         <div
             class="border-t border-brand-200/40 p-2.5 dark:border-brand-700/40"
         >
+            <Button variant="ghost" block @click="emit('open-galgame')" align="start">
+                <svg
+                    viewBox="0 0 24 24"
+                    class="size-4"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                >
+                    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+                    <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+                </svg>
+                视觉小说
+            </Button>
             <Button variant="ghost" block @click="emit('open-settings')" align="start">
                 <svg
                     viewBox="0 0 24 24"

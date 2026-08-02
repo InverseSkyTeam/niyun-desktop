@@ -2,6 +2,7 @@
 import { computed } from "vue";
 import type { ChatMessage } from "../types";
 import NiyunAvatar from "./NiyunAvatar.vue";
+import { parseMarkdown, renderInlineToHtml } from "../markdown";
 
 const props = defineProps<{ message: ChatMessage }>();
 const emit = defineEmits<{
@@ -18,38 +19,20 @@ const time = computed(() =>
     }),
 );
 
-interface Segment {
-    type: "text" | "code";
-    content: string;
-    lang?: string;
-}
-const segments = computed<Segment[]>(() => {
-    const raw = props.message.content ?? "";
-    const out: Segment[] = [];
-    const regex = /```(\w+)?\n([\s\S]*?)```/g;
-    let last = 0;
-    let m: RegExpExecArray | null;
-    while ((m = regex.exec(raw)) !== null) {
-        if (m.index > last)
-            out.push({ type: "text", content: raw.slice(last, m.index) });
-        out.push({
-            type: "code",
-            lang: m[1] || "text",
-            content: m[2].replace(/\n$/, ""),
-        });
-        last = regex.lastIndex;
-    }
-    if (last < raw.length) out.push({ type: "text", content: raw.slice(last) });
-    return out;
-});
+const nodes = computed(() => parseMarkdown(props.message.content ?? ""));
 
-interface Inline {
-    text: string;
-    code: boolean;
-}
-function toInline(text: string): Inline[] {
-    const parts = text.split("`");
-    return parts.map((t, i) => ({ text: t, code: i % 2 === 1 }));
+function nodeHtml(node: ReturnType<typeof parseMarkdown>[number]): string {
+    switch (node.type) {
+        case "h1": return `<h1 class="md-h1">${renderInlineToHtml(node.inline)}</h1>`;
+        case "h2": return `<h2 class="md-h2">${renderInlineToHtml(node.inline)}</h2>`;
+        case "h3": return `<h3 class="md-h3">${renderInlineToHtml(node.inline)}</h3>`;
+        case "p": return `<p class="md-p">${renderInlineToHtml(node.inline)}</p>`;
+        case "quote": return `<blockquote class="md-quote">${renderInlineToHtml(node.inline)}</blockquote>`;
+        case "hr": return `<hr class="md-hr" />`;
+        case "ul": return `<ul class="md-ul">${node.items.map((it) => `<li>${renderInlineToHtml(it)}</li>`).join("")}</ul>`;
+        case "ol": return `<ol class="md-ol">${node.items.map((it) => `<li>${renderInlineToHtml(it)}</li>`).join("")}</ol>`;
+        default: return "";
+    }
 }
 </script>
 
@@ -102,54 +85,48 @@ function toInline(text: string): Inline[] {
                 <span class="think-dot size-1.5 rounded-full bg-brand-500" />
             </div>
 
-            <div
-                v-else
-                class="msg-content inline-block rounded-xl px-3.5 py-2.5 text-[13.5px]"
-                :class="
-                    isUser
-                        ? 'bg-brand-900 text-brand-50 dark:bg-brand-50 dark:text-brand-900'
-                        : 'bg-brand-100 text-brand-900 dark:bg-brand-800 dark:text-brand-50'
-                "
-            >
-                <template v-for="(seg, i) in segments" :key="i">
-                    <div
-                        v-if="seg.type === 'code'"
-                        class="not-prose my-2 overflow-hidden rounded-lg"
-                    >
+            <template v-else>
+                <div
+                    v-if="isUser"
+                    class="msg-content inline-block whitespace-pre-wrap rounded-xl bg-brand-900 px-3.5 py-2.5 text-[13.5px] text-brand-50 dark:bg-brand-50 dark:text-brand-900"
+                >{{ message.content }}</div>
+
+                <div
+                    v-else
+                    class="msg-content md-content inline-block rounded-xl bg-brand-100 px-3.5 py-2.5 text-[13.5px] text-brand-900 dark:bg-brand-800 dark:text-brand-50"
+                >
+                    <template v-for="(node, i) in nodes" :key="i">
                         <div
-                            class="flex items-center justify-between border-b border-brand-700 bg-brand-800 px-3 py-1.5"
+                            v-if="node.type === 'code'"
+                            class="not-prose my-2 overflow-hidden rounded-lg"
                         >
-                            <span
-                                class="font-mono text-[10px] tracking-wider text-brand-300 uppercase"
-                                >{{ seg.lang }}</span
+                            <div
+                                class="flex items-center justify-between border-b border-brand-700 bg-brand-800 px-3 py-1.5"
                             >
-                            <button
-                                type="button"
-                                class="text-[10px] text-brand-400 transition hover:text-brand-100"
-                                @click="emit('copy')"
-                            >
-                                复制
-                            </button>
+                                <span
+                                    class="font-mono text-[10px] tracking-wider text-brand-300 uppercase"
+                                    >{{ node.lang }}</span
+                                >
+                                <button
+                                    type="button"
+                                    class="text-[10px] text-brand-400 transition hover:text-brand-100"
+                                    @click="emit('copy')"
+                                >
+                                    复制
+                                </button>
+                            </div>
+                            <pre
+                                class="scrollbar-thin overflow-x-auto bg-brand-900 p-3 text-[12px] leading-relaxed text-brand-100"
+                            ><code>{{ node.content }}</code></pre>
                         </div>
-                        <pre
-                            class="scrollbar-thin overflow-x-auto bg-brand-900 p-3 text-[12px] leading-relaxed text-brand-100"
-                        ><code>{{ seg.content }}</code></pre>
-                    </div>
-                    <div v-else class="whitespace-pre-wrap">
-                        <template
-                            v-for="(part, j) in toInline(seg.content)"
-                            :key="j"
-                        >
-                            <code
-                                v-if="part.code"
-                                class="rounded bg-black/10 px-1 py-0.5 font-mono text-[0.85em] dark:bg-white/10"
-                                >{{ part.text }}</code
-                            >
-                            <span v-else>{{ part.text }}</span>
-                        </template>
-                    </div>
-                </template>
-            </div>
+
+                        <div
+                            v-else
+                            v-html="nodeHtml(node)"
+                        />
+                    </template>
+                </div>
+            </template>
 
             <div
                 v-if="!message.pending"
