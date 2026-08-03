@@ -1,8 +1,12 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
-import type { PetStats } from "../petState";
-import { getFestival, generateParticles, type FestivalConfig } from "../festival";
-import { generateWeatherParticles, type WeatherCG } from "../weather";
+import type { PetStats } from "../lib/petState";
+import {
+    getFestival,
+    generateParticles,
+    type FestivalConfig,
+} from "../lib/festival";
+import { generateWeatherParticles, type WeatherCG } from "../lib/weather";
 
 type Mood = "neutral" | "happy" | "shy" | "angry" | "sleepy";
 
@@ -25,8 +29,12 @@ const eatBone = ref(false);
 let eatTimers: ReturnType<typeof setTimeout>[] = [];
 
 const festival = computed<FestivalConfig | null>(() => getFestival());
-const particles = computed(() => festival.value ? generateParticles(festival.value) : []);
-const weatherParticles = computed(() => props.weatherCG ? generateWeatherParticles(props.weatherCG) : []);
+const particles = computed(() =>
+    festival.value ? generateParticles(festival.value) : [],
+);
+const weatherParticles = computed(() =>
+    props.weatherCG ? generateWeatherParticles(props.weatherCG) : [],
+);
 
 const hungerPct = computed(() => Math.round(props.petStats?.hunger ?? 100));
 const moodPct = computed(() => Math.round(props.petStats?.mood ?? 100));
@@ -42,7 +50,12 @@ const moodZero = computed(() => (props.petStats?.mood ?? 100) <= 0);
 
 const rainDrops = computed(() => {
     if (!moodZero.value) return [];
-    const drops: { left: number; delay: number; duration: number; size: number }[] = [];
+    const drops: {
+        left: number;
+        delay: number;
+        duration: number;
+        size: number;
+    }[] = [];
     for (let i = 0; i < 35; i++) {
         drops.push({
             left: Math.random() * 100,
@@ -57,7 +70,9 @@ const rainDrops = computed(() => {
 function onPetClick() {
     squishing.value = true;
     emit("pet");
-    setTimeout(() => { squishing.value = false; }, 150);
+    setTimeout(() => {
+        squishing.value = false;
+    }, 150);
 }
 
 function feedPet() {
@@ -65,10 +80,16 @@ function feedPet() {
     eatTimers.forEach(clearTimeout);
     eatTimers = [];
     eatBone.value = false;
-    eatTimers.push(setTimeout(() => { eatBone.value = true; }, 2000));
-    eatTimers.push(setTimeout(() => {
-        eatBone.value = false;
-    }, 4000));
+    eatTimers.push(
+        setTimeout(() => {
+            eatBone.value = true;
+        }, 2000),
+    );
+    eatTimers.push(
+        setTimeout(() => {
+            eatBone.value = false;
+        }, 4000),
+    );
 }
 </script>
 
@@ -86,9 +107,13 @@ function feedPet() {
                     animationDuration: p.duration + 's',
                     fontSize: p.size + 'px',
                 }"
-            >{{ festival?.particle }}</span>
+                >{{ festival?.particle }}</span
+            >
         </div>
-        <div v-if="weatherCG && weatherParticles.length" class="weather-overlay">
+        <div
+            v-if="weatherCG && weatherParticles.length"
+            class="weather-overlay"
+        >
             <span
                 v-for="(p, i) in weatherParticles"
                 :key="'w' + i"
@@ -100,13 +125,18 @@ function feedPet() {
                     animationDuration: p.duration + 's',
                     fontSize: p.size + 'px',
                 }"
-            >{{ weatherCG.particle }}</span>
+                >{{ weatherCG.particle }}</span
+            >
         </div>
 
         <div class="pet-action-bar">
             <button class="action-btn" title="投喂" @click="feedPet">🍣</button>
-            <button class="action-btn" title="摸头" @click="emit('pet')">✋</button>
-            <button class="action-btn" title="偷看屏幕" @click="emit('peek')">👁</button>
+            <button class="action-btn" title="摸头" @click="emit('pet')">
+                ✋
+            </button>
+            <button class="action-btn" title="偷看屏幕" @click="emit('peek')">
+                👁
+            </button>
         </div>
 
         <div
@@ -124,7 +154,12 @@ function feedPet() {
                     },
                 ]"
             >
-                <img src="/niyun.png" alt="逆云" class="pet-img" draggable="false" />
+                <img
+                    src="/niyun.png"
+                    alt="逆云"
+                    class="pet-img"
+                    draggable="false"
+                />
             </div>
 
             <div v-if="isSleeping" class="cg-sleep">
@@ -134,11 +169,15 @@ function feedPet() {
             </div>
 
             <div v-if="lowStatType" class="cg-lowstat">
-                <span class="lowstat-icon">{{ lowStatType === 'hunger' ? '💢' : '💧' }}</span>
+                <span class="lowstat-icon">{{
+                    lowStatType === "hunger" ? "💢" : "💧"
+                }}</span>
             </div>
 
             <div v-if="eating" class="cg-eat">
-                <span class="eat-icon" :class="{ bone: eatBone }">{{ eatBone ? '🦴' : '🐟' }}</span>
+                <span class="eat-icon" :class="{ bone: eatBone }">{{
+                    eatBone ? "🦴" : "🐟"
+                }}</span>
             </div>
 
             <div v-if="moodZero" class="mood-zero-overlay"></div>
@@ -153,18 +192,29 @@ function feedPet() {
                         animationDuration: d.duration + 's',
                         fontSize: d.size + 'px',
                     }"
-                >💧</span>
+                    >💧</span
+                >
             </div>
         </div>
 
         <div class="pet-stats">
             <div class="stat">
                 <span class="stat-icon">🍣</span>
-                <div class="stat-bar"><div class="stat-fill" :style="{ width: hungerPct + '%' }"></div></div>
+                <div class="stat-bar">
+                    <div
+                        class="stat-fill"
+                        :style="{ width: hungerPct + '%' }"
+                    ></div>
+                </div>
             </div>
             <div class="stat">
                 <span class="stat-icon">💖</span>
-                <div class="stat-bar"><div class="stat-fill mood" :style="{ width: moodPct + '%' }"></div></div>
+                <div class="stat-bar">
+                    <div
+                        class="stat-fill mood"
+                        :style="{ width: moodPct + '%' }"
+                    ></div>
+                </div>
             </div>
         </div>
     </div>
@@ -198,7 +248,9 @@ function feedPet() {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background 0.12s ease, border-color 0.12s ease;
+    transition:
+        background 0.12s ease,
+        border-color 0.12s ease;
 }
 
 .action-btn:hover {
@@ -231,7 +283,9 @@ function feedPet() {
 .pet-mood {
     width: 100%;
     height: 100%;
-    transition: filter 0.4s ease, transform 0.4s ease;
+    transition:
+        filter 0.4s ease,
+        transform 0.4s ease;
 }
 
 .pet-mood.sleeping {
@@ -302,9 +356,20 @@ function feedPet() {
     animation: float-z 2.4s ease-in-out infinite;
 }
 
-.z1 { animation-delay: 0s; left: 0; }
-.z2 { animation-delay: 0.8s; left: 8px; font-size: 14px; }
-.z3 { animation-delay: 1.6s; left: 16px; font-size: 13px; }
+.z1 {
+    animation-delay: 0s;
+    left: 0;
+}
+.z2 {
+    animation-delay: 0.8s;
+    left: 8px;
+    font-size: 14px;
+}
+.z3 {
+    animation-delay: 1.6s;
+    left: 16px;
+    font-size: 13px;
+}
 
 .cg-lowstat {
     position: absolute;
@@ -417,13 +482,28 @@ function feedPet() {
     pointer-events: none;
 }
 
-.weather-fall { animation-name: weather-fall; }
-.weather-fall-slow { animation-name: weather-fall-slow; animation-timing-function: linear; }
-.weather-fall-fast { animation-name: weather-fall-fast; animation-timing-function: linear; }
-.weather-drift { animation-name: weather-drift; }
-.weather-flash { animation-name: weather-flash; animation-timing-function: ease-in-out; }
+.weather-fall {
+    animation-name: weather-fall;
+}
+.weather-fall-slow {
+    animation-name: weather-fall-slow;
+    animation-timing-function: linear;
+}
+.weather-fall-fast {
+    animation-name: weather-fall-fast;
+    animation-timing-function: linear;
+}
+.weather-drift {
+    animation-name: weather-drift;
+}
+.weather-flash {
+    animation-name: weather-flash;
+    animation-timing-function: ease-in-out;
+}
 
-.festival-fall { animation-name: festival-fall; }
+.festival-fall {
+    animation-name: festival-fall;
+}
 
 .mood-zero-overlay {
     position: absolute;

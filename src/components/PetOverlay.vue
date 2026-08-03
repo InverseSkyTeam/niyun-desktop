@@ -2,10 +2,14 @@
 import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
-import { type UnlistenFn } from "@tauri-apps/api/event";
-import type { PetStats } from "../petState";
-import { getFestival, generateParticles, type FestivalConfig } from "../festival";
-import { generateWeatherParticles, type WeatherCG } from "../weather";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import type { PetStats } from "../lib/petState";
+import {
+    getFestival,
+    generateParticles,
+    type FestivalConfig,
+} from "../lib/festival";
+import { generateWeatherParticles, type WeatherCG } from "../lib/weather";
 
 type Mood = "neutral" | "happy" | "shy" | "angry" | "sleepy";
 
@@ -33,8 +37,12 @@ let localMoodTimer: ReturnType<typeof setTimeout> | undefined;
 let moveDebounce: ReturnType<typeof setTimeout> | undefined;
 
 const festival = computed<FestivalConfig | null>(() => getFestival());
-const particles = computed(() => festival.value ? generateParticles(festival.value) : []);
-const weatherParticles = computed(() => props.weatherCG ? generateWeatherParticles(props.weatherCG) : []);
+const particles = computed(() =>
+    festival.value ? generateParticles(festival.value) : [],
+);
+const weatherParticles = computed(() =>
+    props.weatherCG ? generateWeatherParticles(props.weatherCG) : [],
+);
 
 const hungerPct = computed(() => Math.round(props.petStats?.hunger ?? 100));
 const moodPct = computed(() => Math.round(props.petStats?.mood ?? 100));
@@ -50,7 +58,12 @@ const moodZero = computed(() => (props.petStats?.mood ?? 100) <= 0);
 
 const rainDrops = computed(() => {
     if (!moodZero.value) return [];
-    const drops: { left: number; delay: number; duration: number; size: number }[] = [];
+    const drops: {
+        left: number;
+        delay: number;
+        duration: number;
+        size: number;
+    }[] = [];
     for (let i = 0; i < 35; i++) {
         drops.push({
             left: Math.random() * 100,
@@ -72,10 +85,16 @@ function feedPet() {
     eatTimers.forEach(clearTimeout);
     eatTimers = [];
     eatBone.value = false;
-    eatTimers.push(setTimeout(() => { eatBone.value = true; }, 2000));
-    eatTimers.push(setTimeout(() => {
-        eatBone.value = false;
-    }, 4000));
+    eatTimers.push(
+        setTimeout(() => {
+            eatBone.value = true;
+        }, 2000),
+    );
+    eatTimers.push(
+        setTimeout(() => {
+            eatBone.value = false;
+        }, 4000),
+    );
 }
 
 function openMenu(e: MouseEvent) {
@@ -94,11 +113,15 @@ function onPetMouseDown(e: MouseEvent) {
         squishing.value = true;
         localMood.value = "shy";
         if (localMoodTimer) clearTimeout(localMoodTimer);
-        localMoodTimer = setTimeout(() => { localMood.value = null; }, 3000);
+        localMoodTimer = setTimeout(() => {
+            localMood.value = null;
+        }, 3000);
         emit("pet");
         getCurrentWindow().startDragging();
         if (moveDebounce) clearTimeout(moveDebounce);
-        moveDebounce = setTimeout(() => { squishing.value = false; }, 150);
+        moveDebounce = setTimeout(() => {
+            squishing.value = false;
+        }, 150);
     }
 }
 
@@ -128,11 +151,19 @@ function isTransparentAt(x: number, y: number): boolean {
     }
     if (petAreaRef.value) {
         const r = petAreaRef.value.getBoundingClientRect();
-        if (r.width > 0 && r.height > 0 && x >= r.left && x < r.right && y >= r.top && y < r.bottom) {
+        if (
+            r.width > 0 &&
+            r.height > 0 &&
+            x >= r.left &&
+            x < r.right &&
+            y >= r.top &&
+            y < r.bottom
+        ) {
             if (!petImageLoaded || !petCtx) return false;
             const localX = Math.floor(x - r.left);
             const localY = Math.floor(y - r.top);
-            if (localX < 0 || localX >= 180 || localY < 0 || localY >= 198) return true;
+            if (localX < 0 || localX >= 180 || localY < 0 || localY >= 198)
+                return true;
             const pixel = petCtx.getImageData(localX, localY, 1, 1).data;
             return pixel[3] < 128;
         }
@@ -153,7 +184,11 @@ async function onMouseMovePassthrough(e: MouseEvent) {
 
 async function pollCursor() {
     try {
-        if (ignoring && ignoreStuckSince > 0 && Date.now() - ignoreStuckSince > 5000) {
+        if (
+            ignoring &&
+            ignoreStuckSince > 0 &&
+            Date.now() - ignoreStuckSince > 5000
+        ) {
             await setPassthrough(false);
             return;
         }
@@ -171,6 +206,20 @@ async function pollCursor() {
 
 let unlistenMove: UnlistenFn | undefined;
 
+const speechText = ref("");
+const speechVisible = ref(false);
+let speechTimer: ReturnType<typeof setTimeout> | undefined;
+let unlistenSpeak: UnlistenFn | undefined;
+
+function showSpeech(text: string, duration = 5000) {
+    speechText.value = text;
+    speechVisible.value = true;
+    if (speechTimer) clearTimeout(speechTimer);
+    speechTimer = setTimeout(() => {
+        speechVisible.value = false;
+    }, duration);
+}
+
 onMounted(async () => {
     loadPetImage();
     unlistenMove = await win.onMoved(() => {
@@ -179,12 +228,20 @@ onMounted(async () => {
             squishing.value = false;
         }, 80);
     });
+    unlistenSpeak = await listen<{ text: string; duration?: number }>(
+        "pet-speak",
+        (e) => {
+            showSpeech(e.payload.text, e.payload.duration);
+        },
+    );
     document.addEventListener("mousemove", onMouseMovePassthrough);
     pollTimer = setInterval(pollCursor, 100);
 });
 
 onUnmounted(() => {
     unlistenMove?.();
+    unlistenSpeak?.();
+    if (speechTimer) clearTimeout(speechTimer);
     eatTimers.forEach(clearTimeout);
     if (moveDebounce) clearTimeout(moveDebounce);
     if (localMoodTimer) clearTimeout(localMoodTimer);
@@ -192,11 +249,14 @@ onUnmounted(() => {
     if (pollTimer) clearInterval(pollTimer);
 });
 
-watch(() => props.mood, (m) => {
-    if (m && m !== "neutral") {
-        localMood.value = null;
-    }
-});
+watch(
+    () => props.mood,
+    (m) => {
+        if (m && m !== "neutral") {
+            localMood.value = null;
+        }
+    },
+);
 </script>
 
 <template>
@@ -213,9 +273,13 @@ watch(() => props.mood, (m) => {
                     animationDuration: p.duration + 's',
                     fontSize: p.size + 'px',
                 }"
-            >{{ festival?.particle }}</span>
+                >{{ festival?.particle }}</span
+            >
         </div>
-        <div v-if="weatherCG && weatherParticles.length" class="weather-overlay">
+        <div
+            v-if="weatherCG && weatherParticles.length"
+            class="weather-overlay"
+        >
             <span
                 v-for="(p, i) in weatherParticles"
                 :key="'w' + i"
@@ -227,7 +291,8 @@ watch(() => props.mood, (m) => {
                     animationDuration: p.duration + 's',
                     fontSize: p.size + 'px',
                 }"
-            >{{ weatherCG.particle }}</span>
+                >{{ weatherCG.particle }}</span
+            >
         </div>
 
         <div
@@ -238,6 +303,16 @@ watch(() => props.mood, (m) => {
             @contextmenu.prevent="openMenu"
             @click="menuVisible = false"
         >
+            <div
+                v-if="speechVisible && speechText"
+                class="pet-speech"
+                @mousedown.stop
+                @click="speechVisible = false"
+            >
+                <span class="speech-tail"></span>
+                {{ speechText }}
+            </div>
+
             <div
                 class="pet-mood"
                 :class="[
@@ -258,11 +333,15 @@ watch(() => props.mood, (m) => {
             </div>
 
             <div v-if="lowStatType" class="cg-lowstat">
-                <span class="lowstat-icon">{{ lowStatType === 'hunger' ? '💢' : '💧' }}</span>
+                <span class="lowstat-icon">{{
+                    lowStatType === "hunger" ? "💢" : "💧"
+                }}</span>
             </div>
 
             <div v-if="eating" class="cg-eat">
-                <span class="eat-icon" :class="{ bone: eatBone }">{{ eatBone ? '🦴' : '🐟' }}</span>
+                <span class="eat-icon" :class="{ bone: eatBone }">{{
+                    eatBone ? "🦴" : "🐟"
+                }}</span>
             </div>
 
             <div v-if="moodZero" class="mood-zero-overlay"></div>
@@ -277,17 +356,28 @@ watch(() => props.mood, (m) => {
                         animationDuration: d.duration + 's',
                         fontSize: d.size + 'px',
                     }"
-                >💧</span>
+                    >💧</span
+                >
             </div>
 
             <div class="pet-stats">
                 <div class="stat">
                     <span class="stat-icon">🍣</span>
-                    <div class="stat-bar"><div class="stat-fill" :style="{ width: hungerPct + '%' }"></div></div>
+                    <div class="stat-bar">
+                        <div
+                            class="stat-fill"
+                            :style="{ width: hungerPct + '%' }"
+                        ></div>
+                    </div>
                 </div>
                 <div class="stat">
                     <span class="stat-icon">💖</span>
-                    <div class="stat-bar"><div class="stat-fill mood" :style="{ width: moodPct + '%' }"></div></div>
+                    <div class="stat-bar">
+                        <div
+                            class="stat-fill mood"
+                            :style="{ width: moodPct + '%' }"
+                        ></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -447,15 +537,36 @@ watch(() => props.mood, (m) => {
     animation: float-z 2.4s ease-in-out infinite;
 }
 
-.z1 { animation-delay: 0s; left: 0; }
-.z2 { animation-delay: 0.8s; left: 10px; font-size: 18px; }
-.z3 { animation-delay: 1.6s; left: 20px; font-size: 16px; }
+.z1 {
+    animation-delay: 0s;
+    left: 0;
+}
+.z2 {
+    animation-delay: 0.8s;
+    left: 10px;
+    font-size: 18px;
+}
+.z3 {
+    animation-delay: 1.6s;
+    left: 20px;
+    font-size: 16px;
+}
 
 @keyframes float-z {
-    0% { transform: translateY(0) scale(0.6); opacity: 0; }
-    20% { opacity: 1; }
-    80% { opacity: 0.6; }
-    100% { transform: translateY(-30px) scale(1.1); opacity: 0; }
+    0% {
+        transform: translateY(0) scale(0.6);
+        opacity: 0;
+    }
+    20% {
+        opacity: 1;
+    }
+    80% {
+        opacity: 0.6;
+    }
+    100% {
+        transform: translateY(-30px) scale(1.1);
+        opacity: 0;
+    }
 }
 
 .cg-lowstat {
@@ -473,8 +584,13 @@ watch(() => props.mood, (m) => {
 }
 
 @keyframes shake-icon {
-    0%, 100% { transform: rotate(-8deg) translateY(0); }
-    50% { transform: rotate(8deg) translateY(-3px); }
+    0%,
+    100% {
+        transform: rotate(-8deg) translateY(0);
+    }
+    50% {
+        transform: rotate(8deg) translateY(-3px);
+    }
 }
 
 .cg-eat {
@@ -496,13 +612,25 @@ watch(() => props.mood, (m) => {
 }
 
 @keyframes eat-pop {
-    0% { transform: scale(0) rotate(-20deg); opacity: 0; }
-    100% { transform: scale(1) rotate(0deg); opacity: 1; }
+    0% {
+        transform: scale(0) rotate(-20deg);
+        opacity: 0;
+    }
+    100% {
+        transform: scale(1) rotate(0deg);
+        opacity: 1;
+    }
 }
 
 @keyframes bone-fade {
-    0% { transform: scale(0.5); opacity: 0; }
-    100% { transform: scale(1); opacity: 1; }
+    0% {
+        transform: scale(0.5);
+        opacity: 0;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
 }
 
 .festival-overlay {
@@ -568,14 +696,26 @@ watch(() => props.mood, (m) => {
 }
 
 @keyframes overlay-fade-in {
-    0% { opacity: 0; }
-    100% { opacity: 1; }
+    0% {
+        opacity: 0;
+    }
+    100% {
+        opacity: 1;
+    }
 }
 
 @keyframes rain-fall {
-    0% { transform: translateY(0) translateX(0); opacity: 0; }
-    10% { opacity: 0.8; }
-    100% { transform: translateY(260px) translateX(-10px); opacity: 0; }
+    0% {
+        transform: translateY(0) translateX(0);
+        opacity: 0;
+    }
+    10% {
+        opacity: 0.8;
+    }
+    100% {
+        transform: translateY(260px) translateX(-10px);
+        opacity: 0;
+    }
 }
 
 .context-menu {
@@ -605,5 +745,47 @@ watch(() => props.mood, (m) => {
 
 .menu-item:hover {
     background: rgba(212, 165, 116, 0.25);
+}
+
+.pet-speech {
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 12px);
+    transform: translateX(-50%);
+    max-width: 210px;
+    padding: 8px 12px;
+    background: rgba(255, 250, 245, 0.96);
+    border: 1px solid rgba(199, 175, 220, 0.5);
+    border-radius: 14px;
+    box-shadow: 0 4px 14px rgba(140, 107, 230, 0.16);
+    font-size: 13px;
+    line-height: 1.5;
+    color: #5a4a6a;
+    word-break: break-word;
+    white-space: pre-wrap;
+    pointer-events: auto;
+    z-index: 60;
+    animation: speech-pop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.speech-tail {
+    position: absolute;
+    left: 50%;
+    bottom: -8px;
+    transform: translateX(-50%);
+    border-left: 7px solid transparent;
+    border-right: 7px solid transparent;
+    border-top: 8px solid rgba(255, 250, 245, 0.96);
+}
+
+@keyframes speech-pop {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) scale(0.8);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) scale(1);
+    }
 }
 </style>

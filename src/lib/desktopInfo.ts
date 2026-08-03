@@ -113,7 +113,7 @@ function getProcessCategory(process: string): string {
         if (base.startsWith("chrome")) return "浏览器(Chrome)";
         if (base.startsWith("msedge")) return "浏览器(Edge)";
         if (base.startsWith("firefox")) return "浏览器(Firefox)";
-        if (base.endsWith("64") || (base.endsWith("_64"))) return "应用程序";
+        if (base.endsWith("64") || base.endsWith("_64")) return "应用程序";
     }
     return "";
 }
@@ -144,10 +144,14 @@ export function desktopInfoToPrompt(info: DesktopInfo): string {
     }
 
     if (info.child_texts.length) {
-        const filtered = info.child_texts.filter(t => {
+        const filtered = info.child_texts.filter((t) => {
             const lower = t.toLowerCase();
-            return !lower.includes("statusbar") && !lower.includes("scrollbar")
-                && t.length > 2 && !/^[\d\s\.\-_]+$/.test(t);
+            return (
+                !lower.includes("statusbar") &&
+                !lower.includes("scrollbar") &&
+                t.length > 2 &&
+                !/^[\d\s\.\-_]+$/.test(t)
+            );
         });
         if (filtered.length) {
             lines.push("前台窗口内的文本内容：");

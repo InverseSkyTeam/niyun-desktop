@@ -6,6 +6,7 @@ export interface ChatMessage {
     content: string;
     createdAt: number;
     pending?: boolean;
+    reasoning?: string;
 }
 
 export interface Conversation {
@@ -16,7 +17,12 @@ export interface Conversation {
     lastActive: number;
 }
 
-export type AIProviderId = "deepseek" | "zhipu" | "moonshot" | "openai" | "anthropic";
+export type AIProviderId =
+    | "deepseek"
+    | "zhipu"
+    | "moonshot"
+    | "openai"
+    | "anthropic";
 
 export interface AIModelConfig {
     id: string;
@@ -49,8 +55,16 @@ export function createDefaultAIConfig(): AIConfig {
                 baseUrl: "https://api.deepseek.com",
                 enabled: true,
                 models: [
-                    { id: "deepseek-v4-flash", name: "Deepseek V4 Flash", enabled: true },
-                    { id: "deepseek-v4-pro", name: "Deepseek V4 Pro", enabled: false },
+                    {
+                        id: "deepseek-v4-flash",
+                        name: "Deepseek V4 Flash",
+                        enabled: true,
+                    },
+                    {
+                        id: "deepseek-v4-pro",
+                        name: "Deepseek V4 Pro",
+                        enabled: false,
+                    },
                 ],
             },
             {
@@ -72,9 +86,21 @@ export function createDefaultAIConfig(): AIConfig {
                 baseUrl: "https://api.moonshot.cn",
                 enabled: false,
                 models: [
-                    { id: "moonshot-v1-8k", name: "moonshot-v1-8k", enabled: true },
-                    { id: "moonshot-v1-32k", name: "moonshot-v1-32k", enabled: false },
-                    { id: "moonshot-v1-128k", name: "moonshot-v1-128k", enabled: false },
+                    {
+                        id: "moonshot-v1-8k",
+                        name: "moonshot-v1-8k",
+                        enabled: true,
+                    },
+                    {
+                        id: "moonshot-v1-32k",
+                        name: "moonshot-v1-32k",
+                        enabled: false,
+                    },
+                    {
+                        id: "moonshot-v1-128k",
+                        name: "moonshot-v1-128k",
+                        enabled: false,
+                    },
                 ],
             },
             {
@@ -95,21 +121,51 @@ export function createDefaultAIConfig(): AIConfig {
                 baseUrl: "https://api.anthropic.com",
                 enabled: false,
                 models: [
-                    { id: "claude-sonnet-4-20250514", name: "claude-sonnet-4", enabled: true },
-                    { id: "claude-haiku-3-5-20241022", name: "claude-haiku-3-5", enabled: false },
+                    {
+                        id: "claude-sonnet-4-20250514",
+                        name: "claude-sonnet-4",
+                        enabled: true,
+                    },
+                    {
+                        id: "claude-haiku-3-5-20241022",
+                        name: "claude-haiku-3-5",
+                        enabled: false,
+                    },
                 ],
             },
         ],
     };
 }
 
-export function getEnabledModels(config: AIConfig): { providerId: AIProviderId; providerName: string; modelId: string; modelName: string }[] {
-    const result: { providerId: AIProviderId; providerName: string; modelId: string; modelName: string }[] = [];
+export interface ToolApprovalRequest {
+    id: string;
+    toolName: string;
+    input: unknown;
+    approvalId: string;
+}
+
+export function getEnabledModels(config: AIConfig): {
+    providerId: AIProviderId;
+    providerName: string;
+    modelId: string;
+    modelName: string;
+}[] {
+    const result: {
+        providerId: AIProviderId;
+        providerName: string;
+        modelId: string;
+        modelName: string;
+    }[] = [];
     for (const p of config.providers) {
         if (!p.enabled) continue;
         for (const m of p.models) {
             if (m.enabled) {
-                result.push({ providerId: p.id, providerName: p.name, modelId: m.id, modelName: m.name });
+                result.push({
+                    providerId: p.id,
+                    providerName: p.name,
+                    modelId: m.id,
+                    modelName: m.name,
+                });
             }
         }
     }

@@ -284,18 +284,30 @@ fn get_desktop_info() -> Result<DesktopInfo, String> {
             end try
             return appName & \"|||\" & winTitle
         end tell";
-        let out = Command::new("osascript").args(["-e", script]).output().ok()?;
-        if !out.status.success() { return None; }
+        let out = Command::new("osascript")
+            .args(["-e", script])
+            .output()
+            .ok()?;
+        if !out.status.success() {
+            return None;
+        }
         let text = String::from_utf8_lossy(&out.stdout).trim().to_string();
         let mut parts = text.splitn(2, "|||");
         let proc = parts.next()?.to_string();
         let title = parts.next().unwrap_or("").to_string();
-        Some(WindowInfo { title, process: proc, class_name: String::new() })
+        Some(WindowInfo {
+            title,
+            process: proc,
+            class_name: String::new(),
+        })
     })();
 
     let (screen_w, screen_h) = (|| -> Option<(i32, i32)> {
         let script = "tell application \"Finder\" to get bounds of window of desktop";
-        let out = Command::new("osascript").args(["-e", script]).output().ok()?;
+        let out = Command::new("osascript")
+            .args(["-e", script])
+            .output()
+            .ok()?;
         let text = String::from_utf8_lossy(&out.stdout).trim().to_string();
         let parts: Vec<&str> = text.split(", ").collect();
         if parts.len() == 4 {
@@ -303,7 +315,8 @@ fn get_desktop_info() -> Result<DesktopInfo, String> {
         } else {
             None
         }
-    })().unwrap_or((0, 0));
+    })()
+    .unwrap_or((0, 0));
 
     Ok(DesktopInfo {
         foreground,
@@ -323,23 +336,38 @@ fn get_desktop_info() -> Result<DesktopInfo, String> {
     let foreground = (|| -> Option<WindowInfo> {
         let title_out = Command::new("xdotool")
             .args(["getactivewindow", "getwindowname"])
-            .output().ok()?;
-        if !title_out.status.success() { return None; }
-        let title = String::from_utf8_lossy(&title_out.stdout).trim().to_string();
+            .output()
+            .ok()?;
+        if !title_out.status.success() {
+            return None;
+        }
+        let title = String::from_utf8_lossy(&title_out.stdout)
+            .trim()
+            .to_string();
 
         let pid_out = Command::new("xdotool")
             .args(["getactivewindow", "getwindowpid"])
-            .output().ok()?;
-        if !pid_out.status.success() { return None; }
+            .output()
+            .ok()?;
+        if !pid_out.status.success() {
+            return None;
+        }
         let pid = String::from_utf8_lossy(&pid_out.stdout).trim().to_string();
 
         let proc_out = Command::new("ps")
             .args(["-p", &pid, "-o", "comm="])
-            .output().ok()?;
-        if !proc_out.status.success() { return None; }
+            .output()
+            .ok()?;
+        if !proc_out.status.success() {
+            return None;
+        }
         let process = String::from_utf8_lossy(&proc_out.stdout).trim().to_string();
 
-        Some(WindowInfo { title, process, class_name: String::new() })
+        Some(WindowInfo {
+            title,
+            process,
+            class_name: String::new(),
+        })
     })();
 
     let (screen_w, screen_h) = (|| -> Option<(i32, i32)> {
@@ -355,7 +383,8 @@ fn get_desktop_info() -> Result<DesktopInfo, String> {
             }
         }
         None
-    })().unwrap_or((0, 0));
+    })()
+    .unwrap_or((0, 0));
 
     Ok(DesktopInfo {
         foreground,
@@ -373,7 +402,96 @@ fn get_desktop_info() -> Result<DesktopInfo, String> {
     Err("Not supported on this platform".to_string())
 }
 
+use std::fs;
+use std::path::Path;
+use std::process::Command;
 use tauri::Manager;
+
+#[tauri::command]
+fn read_file(path: String) -> Result<String, String> {
+    fs::read_to_string(&path).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn write_file(path: String, content: String) -> Result<String, String> {
+    if let Some(parent) = Path::new(&path).parent() {
+        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    let len = content.len();
+    fs::write(&path, &content).map_err(|e| e.to_string())?;
+    Ok(format!("已写入 {} 字节", len))
+}
+
+#[tauri::command]
+fn list_directory(path: String) -> Result<Vec<serde_json::Value>, String> {
+    let mut entries: Vec<serde_json::Value> = fs::read_dir(&path)
+        .map_err(|e| e.to_string())?
+        .filter_map(|e| {
+            let e = e.ok()?;
+            let ft = e.file_type().ok()?;
+            let meta = e.metadata().ok()?;
+            Some(serde_json::json!({
+                "name": e.file_name().to_string_lossy(),
+                "is_dir": ft.is_dir(),
+                "size": meta.len(),
+            }))
+        })
+        .collect();
+    entries.sort_by(|a, b| {
+        let a_dir = a["is_dir"].as_bool().unwrap_or(false);
+        let b_dir = b["is_dir"].as_bool().unwrap_or(false);
+        if a_dir != b_dir {
+            b_dir.cmp(&a_dir)
+        } else {
+            a["name"]
+                .as_str()
+                .unwrap_or("")
+                .cmp(b["name"].as_str().unwrap_or(""))
+        }
+    });
+    Ok(entries)
+}
+
+#[tauri::command]
+fn run_command(command: String) -> Result<String, String> {
+    let shell = if cfg!(target_os = "windows") {
+        "cmd"
+    } else {
+        "sh"
+    };
+    let flag = if cfg!(target_os = "windows") {
+        "/C"
+    } else {
+        "-c"
+    };
+    let output = Command::new(shell)
+        .args([flag, &command])
+        .output()
+        .map_err(|e| format!("命令执行失败: {}", e))?;
+    let mut result = String::new();
+    if !output.stdout.is_empty() {
+        result.push_str(&String::from_utf8_lossy(&output.stdout).trim());
+    }
+    if !output.stderr.is_empty() {
+        if !result.is_empty() {
+            result.push('\n');
+        }
+        result.push_str(&String::from_utf8_lossy(&output.stderr).trim());
+    }
+    if !output.status.success() && result.is_empty() {
+        result = format!("命令退出码: {}", output.status.code().unwrap_or(-1));
+    }
+    Ok(result)
+}
+
+#[tauri::command]
+fn get_workspace_root() -> Result<String, String> {
+    let a = std::env::current_dir()
+        .map(|p| p.to_string_lossy().to_string())
+        .map_err(|e| e.to_string())?;
+    println!("{}", a);
+    Ok(a)
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -392,7 +510,15 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_sql::Builder::new().build())
-        .invoke_handler(tauri::generate_handler![get_cursor_pos, get_desktop_info])
+        .invoke_handler(tauri::generate_handler![
+            get_cursor_pos,
+            get_desktop_info,
+            read_file,
+            write_file,
+            list_directory,
+            run_command,
+            get_workspace_root,
+        ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 if window.label() == "main" {

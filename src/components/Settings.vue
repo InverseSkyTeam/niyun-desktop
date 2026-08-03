@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { ref, reactive } from "vue";
+import { ref, reactive, watch } from "vue";
 import Button from "./Button.vue";
 import Switch from "./Switch.vue";
-import { loadAIConfig, saveAIConfig } from "../ai";
-import type { AIConfig } from "../types";
+import NiyunAvatar from "./NiyunAvatar.vue";
+import { css } from "../lib/css";
+import { loadAIConfig, saveAIConfig } from "../lib/ai";
+import type { AIConfig } from "../lib/types";
 
 defineProps<{
     theme: "light" | "dark";
@@ -29,10 +31,10 @@ const alwaysOnTop = ref(false);
 const autoStart = ref(false);
 const windowOpacity = ref(100);
 const reminderEnabled = ref(
-    localStorage.getItem("reminder-enabled") === "true"
+    localStorage.getItem("reminder-enabled") === "true",
 );
 const reminderInterval = ref(
-    Number(localStorage.getItem("reminder-interval")) || 30
+    Number(localStorage.getItem("reminder-interval")) || 30,
 );
 
 const aiConfig = reactive<AIConfig>(loadAIConfig());
@@ -51,122 +53,164 @@ function setReminderInterval(opt: number) {
     localStorage.setItem("reminder-interval", String(opt));
 }
 
-function saveSettings() {
-    const settings = {
-        fontSize: fontSize.value,
-        alwaysOnTop: alwaysOnTop.value,
-        autoStart: autoStart.value,
-        windowOpacity: windowOpacity.value,
-    };
-    localStorage.setItem("pet-settings", JSON.stringify(settings));
-    saveAIConfig(aiConfig);
-    emit("back");
-}
+watch(
+    [fontSize, alwaysOnTop, autoStart, windowOpacity],
+    () => {
+        localStorage.setItem(
+            "pet-settings",
+            JSON.stringify({
+                fontSize: fontSize.value,
+                alwaysOnTop: alwaysOnTop.value,
+                autoStart: autoStart.value,
+                windowOpacity: windowOpacity.value,
+            }),
+        );
+    },
+);
+
+watch(
+    aiConfig,
+    () => {
+        saveAIConfig(aiConfig);
+    },
+    { deep: true },
+);
 </script>
 
 <template>
     <div class="flex flex-1 overflow-hidden">
         <nav
-            class="flex w-60 shrink-0 flex-col gap-0.5 border-r border-brand-200/40 bg-brand-50 p-2 dark:border-brand-700/40 dark:bg-brand-800"
+            class="flex w-60 shrink-0 flex-col border-r border-brand-200/50 bg-white/60 backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.03]"
         >
-            <Button
-                v-for="s in sections"
-                :key="s.id"
-                variant="ghost"
-                size="sm"
-                block
-                align="start"
-                :active="activeSection === s.id"
-                @click="activeSection = s.id"
+            <div
+                data-tauri-drag-region
+                class="flex cursor-default items-center gap-2.5 px-4 py-4"
             >
-                <svg
-                    v-if="s.icon === 'sun'"
-                    viewBox="0 0 24 24"
-                    class="size-4 shrink-0"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                >
-                    <circle cx="12" cy="12" r="4" />
-                    <path
-                        d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"
-                    />
-                </svg>
-                <svg
-                    v-else-if="s.icon === 'paw'"
-                    viewBox="0 0 24 24"
-                    class="size-4 shrink-0"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                >
-                    <circle cx="5.5" cy="11" r="1.5" />
-                    <circle cx="9.5" cy="6.5" r="1.5" />
-                    <circle cx="14.5" cy="6.5" r="1.5" />
-                    <circle cx="18.5" cy="11" r="1.5" />
-                    <path
-                        d="M12 12.5c-2.8 0-5 2-5 4.5 0 1.4.9 2.5 2.2 2.5h5.6c1.3 0 2.2-1.1 2.2-2.5 0-2.5-2.2-4.5-5-4.5z"
-                    />
-                </svg>
-                <svg
-                    v-else-if="s.icon === 'sparkles'"
-                    viewBox="0 0 24 24"
-                    class="size-4 shrink-0"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                >
-                    <path d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 0 0-2.455 2.456ZM16.894 20.567 16.5 22l-.394-1.433a2.25 2.25 0 0 0-1.673-1.673L13 18.5l1.433-.394a2.25 2.25 0 0 0 1.673-1.673L16.5 15l.394 1.433a2.25 2.25 0 0 0 1.673 1.673L20 18.5l-1.433.394a2.25 2.25 0 0 0-1.673 1.673Z" />
-                </svg>
-                <svg
-                    v-else
-                    viewBox="0 0 24 24"
-                    class="size-4 shrink-0"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                >
-                    <circle cx="12" cy="12" r="10" />
-                    <path d="M12 16v-4M12 8h.01" />
-                </svg>
-                {{ s.label }}
-            </Button>
+                <div class="pointer-events-none">
+                    <NiyunAvatar :size="32" />
+                </div>
+                <div class="pointer-events-none min-w-0">
+                    <p class="truncate text-sm leading-tight font-semibold">
+                        逆云学习版
+                    </p>
+                </div>
+            </div>
 
-            <div class="flex-1" />
-
-            <Button
-                variant="ghost"
-                size="sm"
-                block
-                align="start"
-                @click="emit('back')"
-            >
-                <svg
-                    viewBox="0 0 24 24"
-                    class="size-4 shrink-0"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
+            <div class="px-3.5">
+                <p
+                    class="px-2 pb-1.5 text-[10px] font-semibold tracking-wider text-brand-400 uppercase dark:text-brand-400/60"
                 >
-                    <path d="m12 19-7-7 7-7M19 12H5" />
-                </svg>
-                返回对话
-            </Button>
+                    设置
+                </p>
+            </div>
+
+            <div class="flex-1 scrollbar-thin overflow-y-auto px-2.5">
+                <ul class="space-y-0.5">
+                    <li v-for="s in sections" :key="s.id">
+                        <div
+                            class="flex cursor-pointer items-center gap-2 rounded-xl px-3 py-2.5 transition"
+                            :class="
+                                css(
+                                    activeSection === s.id
+                                        ? 'bg-gradient-to-r from-brand-500/15 to-brand-700/10 text-brand-700 shadow-soft dark:from-brand-500/20 dark:to-brand-700/10 dark:text-brand-100'
+                                        : 'text-brand-700 hover:bg-white/60 dark:text-brand-300 dark:hover:bg-white/5',
+                                )
+                            "
+                            @click="activeSection = s.id"
+                        >
+                            <svg
+                                v-if="s.icon === 'sun'"
+                                viewBox="0 0 24 24"
+                                class="size-4 shrink-0"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            >
+                                <circle cx="12" cy="12" r="4" />
+                                <path
+                                    d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"
+                                />
+                            </svg>
+                            <svg
+                                v-else-if="s.icon === 'paw'"
+                                viewBox="0 0 24 24"
+                                class="size-4 shrink-0"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            >
+                                <circle cx="5.5" cy="11" r="1.5" />
+                                <circle cx="9.5" cy="6.5" r="1.5" />
+                                <circle cx="14.5" cy="6.5" r="1.5" />
+                                <circle cx="18.5" cy="11" r="1.5" />
+                                <path
+                                    d="M12 12.5c-2.8 0-5 2-5 4.5 0 1.4.9 2.5 2.2 2.5h5.6c1.3 0 2.2-1.1 2.2-2.5 0-2.5-2.2-4.5-5-4.5z"
+                                />
+                            </svg>
+                            <svg
+                                v-else-if="s.icon === 'sparkles'"
+                                viewBox="0 0 24 24"
+                                class="size-4 shrink-0"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            >
+                                <path
+                                    d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 0 0-2.455 2.456ZM16.894 20.567 16.5 22l-.394-1.433a2.25 2.25 0 0 0-1.673-1.673L13 18.5l1.433-.394a2.25 2.25 0 0 0 1.673-1.673L16.5 15l.394 1.433a2.25 2.25 0 0 0 1.673 1.673L20 18.5l-1.433.394a2.25 2.25 0 0 0-1.673 1.673Z"
+                                />
+                            </svg>
+                            <svg
+                                v-else
+                                viewBox="0 0 24 24"
+                                class="size-4 shrink-0"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            >
+                                <circle cx="12" cy="12" r="10" />
+                                <path d="M12 16v-4M12 8h.01" />
+                            </svg>
+                            <span
+                                class="truncate text-[13px] leading-tight font-medium"
+                                >{{ s.label }}</span
+                            >
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="border-t border-brand-200/50 p-2.5 dark:border-white/10">
+                <Button
+                    variant="ghost"
+                    block
+                    align="start"
+                    @click="emit('back')"
+                >
+                    <svg
+                        viewBox="0 0 24 24"
+                        class="size-4"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                    >
+                        <path d="m12 19-7-7 7-7M19 12H5" />
+                    </svg>
+                    返回对话
+                </Button>
+            </div>
         </nav>
 
-        <div
-            class="flex-1 scrollbar-thin overflow-y-auto bg-white dark:bg-brand-900"
-        >
+        <div class="flex-1 scrollbar-thin overflow-y-auto bg-transparent">
             <div class="mx-auto max-w-lg px-10 py-8">
                 <section
                     v-if="activeSection === 'appearance'"
@@ -295,26 +339,6 @@ function saveSettings() {
                         <Switch v-model="autoStart" />
                     </div>
 
-                    <div class="space-y-2">
-                        <div class="flex items-center justify-between">
-                            <label class="text-[13px] font-medium"
-                                >窗口透明度</label
-                            >
-                            <span
-                                class="font-mono text-xs text-brand-500 dark:text-brand-400"
-                                >{{ windowOpacity }}%</span
-                            >
-                        </div>
-                        <input
-                            v-model.number="windowOpacity"
-                            type="range"
-                            min="50"
-                            max="100"
-                            step="5"
-                            class="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-brand-200/60 accent-brand-900 dark:bg-brand-700 dark:accent-brand-50"
-                        />
-                    </div>
-
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-[13px] font-medium">定时提醒</p>
@@ -362,7 +386,7 @@ function saveSettings() {
                         <div
                             v-for="(provider, pi) in aiConfig.providers"
                             :key="provider.id"
-                            class="rounded-lg border border-brand-200/60 bg-brand-50/50 p-3 dark:border-brand-700/30 dark:bg-brand-800/50"
+                            class="rounded-2xl border border-brand-200/50 bg-white/70 p-3 shadow-soft backdrop-blur dark:border-white/10 dark:bg-white/5"
                         >
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center gap-2">
@@ -391,7 +415,7 @@ function saveSettings() {
                                             v-model="provider.apiKey"
                                             type="password"
                                             placeholder="sk-..."
-                                            class="w-full rounded-lg border border-brand-200/60 bg-white px-2.5 py-1.5 text-xs text-brand-900 placeholder:text-brand-300 focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-200 dark:border-brand-700 dark:bg-brand-900 dark:text-brand-50 dark:placeholder:text-brand-600 dark:focus:border-brand-500 dark:focus:ring-brand-700"
+                                            class="w-full rounded-lg border border-brand-200/60 bg-white px-2.5 py-1.5 text-xs text-brand-900 placeholder:text-brand-300 focus:border-brand-400 focus:ring-2 focus:ring-brand-200 focus:outline-none dark:border-brand-700 dark:bg-brand-900 dark:text-brand-50 dark:placeholder:text-brand-600 dark:focus:border-brand-500 dark:focus:ring-brand-700"
                                         />
                                     </div>
                                     <div>
@@ -403,7 +427,7 @@ function saveSettings() {
                                         <input
                                             v-model="provider.baseUrl"
                                             type="text"
-                                            class="w-full rounded-lg border border-brand-200/60 bg-white px-2.5 py-1.5 text-xs text-brand-900 placeholder:text-brand-300 focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-200 dark:border-brand-700 dark:bg-brand-900 dark:text-brand-50 dark:placeholder:text-brand-600 dark:focus:border-brand-500 dark:focus:ring-brand-700"
+                                            class="w-full rounded-lg border border-brand-200/60 bg-white px-2.5 py-1.5 text-xs text-brand-900 placeholder:text-brand-300 focus:border-brand-400 focus:ring-2 focus:ring-brand-200 focus:outline-none dark:border-brand-700 dark:bg-brand-900 dark:text-brand-50 dark:placeholder:text-brand-600 dark:focus:border-brand-500 dark:focus:ring-brand-700"
                                         />
                                     </div>
                                     <div>
@@ -414,7 +438,9 @@ function saveSettings() {
                                         </label>
                                         <div class="space-y-1">
                                             <label
-                                                v-for="(model, mi) in provider.models"
+                                                v-for="(
+                                                    model, mi
+                                                ) in provider.models"
                                                 :key="model.id"
                                                 class="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 transition hover:bg-brand-100/60 dark:hover:bg-brand-700/40"
                                             >
@@ -520,15 +546,6 @@ function saveSettings() {
                         </div>
                     </div>
                 </section>
-
-                <div
-                    v-if="activeSection !== 'about'"
-                    class="mt-8 border-t border-brand-200/40 pt-4 dark:border-brand-700/40"
-                >
-                    <Button variant="primary" size="sm" @click="saveSettings">
-                        保存设置
-                    </Button>
-                </div>
             </div>
         </div>
     </div>

@@ -14,10 +14,7 @@ export interface Inline {
 }
 
 function escapeHtml(s: string): string {
-    return s
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;");
+    return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 function parseInline(text: string): Inline[] {
@@ -29,7 +26,10 @@ function parseInline(text: string): Inline[] {
         if (rest.startsWith("**")) {
             const end = text.indexOf("**", i + 2);
             if (end !== -1) {
-                if (buf) { out.push({ kind: "text", text: buf }); buf = ""; }
+                if (buf) {
+                    out.push({ kind: "text", text: buf });
+                    buf = "";
+                }
                 out.push({ kind: "bold", text: text.slice(i + 2, end) });
                 i = end + 2;
                 continue;
@@ -38,7 +38,10 @@ function parseInline(text: string): Inline[] {
         if (rest.startsWith("*") && !rest.startsWith("**")) {
             const end = text.indexOf("*", i + 1);
             if (end !== -1 && end !== i + 1) {
-                if (buf) { out.push({ kind: "text", text: buf }); buf = ""; }
+                if (buf) {
+                    out.push({ kind: "text", text: buf });
+                    buf = "";
+                }
                 out.push({ kind: "italic", text: text.slice(i + 1, end) });
                 i = end + 1;
                 continue;
@@ -47,7 +50,10 @@ function parseInline(text: string): Inline[] {
         if (rest.startsWith("`")) {
             const end = text.indexOf("`", i + 1);
             if (end !== -1) {
-                if (buf) { out.push({ kind: "text", text: buf }); buf = ""; }
+                if (buf) {
+                    out.push({ kind: "text", text: buf });
+                    buf = "";
+                }
                 out.push({ kind: "code", text: text.slice(i + 1, end) });
                 i = end + 1;
                 continue;
@@ -56,7 +62,10 @@ function parseInline(text: string): Inline[] {
         if (rest.startsWith("[")) {
             const m = /^\[([^\]]+)\]\(([^)]+)\)/.exec(rest);
             if (m) {
-                if (buf) { out.push({ kind: "text", text: buf }); buf = ""; }
+                if (buf) {
+                    out.push({ kind: "text", text: buf });
+                    buf = "";
+                }
                 out.push({ kind: "link", text: m[1], href: m[2] });
                 i += m[0].length;
                 continue;
@@ -77,7 +86,10 @@ export function parseMarkdown(src: string): MdNode[] {
     while (i < lines.length) {
         let line = lines[i];
 
-        if (!line.trim()) { i++; continue; }
+        if (!line.trim()) {
+            i++;
+            continue;
+        }
 
         const codeMatch = /^```(\w*)$/.exec(line.trim());
         if (codeMatch) {
@@ -94,16 +106,28 @@ export function parseMarkdown(src: string): MdNode[] {
         }
 
         if (/^###\s+/.test(line)) {
-            nodes.push({ type: "h3", inline: parseInline(line.replace(/^###\s+/, "")) });
-            i++; continue;
+            nodes.push({
+                type: "h3",
+                inline: parseInline(line.replace(/^###\s+/, "")),
+            });
+            i++;
+            continue;
         }
         if (/^##\s+/.test(line)) {
-            nodes.push({ type: "h2", inline: parseInline(line.replace(/^##\s+/, "")) });
-            i++; continue;
+            nodes.push({
+                type: "h2",
+                inline: parseInline(line.replace(/^##\s+/, "")),
+            });
+            i++;
+            continue;
         }
         if (/^#\s+/.test(line)) {
-            nodes.push({ type: "h1", inline: parseInline(line.replace(/^#\s+/, "")) });
-            i++; continue;
+            nodes.push({
+                type: "h1",
+                inline: parseInline(line.replace(/^#\s+/, "")),
+            });
+            i++;
+            continue;
         }
 
         if (/^>\s?/.test(line)) {
@@ -118,7 +142,8 @@ export function parseMarkdown(src: string): MdNode[] {
 
         if (/^(-{3,}|\*{3,}|_{3,})$/.test(line.trim())) {
             nodes.push({ type: "hr" });
-            i++; continue;
+            i++;
+            continue;
         }
 
         if (/^[-*]\s+/.test(line)) {
@@ -142,7 +167,11 @@ export function parseMarkdown(src: string): MdNode[] {
         }
 
         const para: string[] = [];
-        while (i < lines.length && lines[i].trim() && !/^(#{1,3}\s|>|```|[-*]\s|\d+\.\s|-{3,})/.test(lines[i])) {
+        while (
+            i < lines.length &&
+            lines[i].trim() &&
+            !/^(#{1,3}\s|>|```|[-*]\s|\d+\.\s|-{3,})/.test(lines[i])
+        ) {
             para.push(lines[i]);
             i++;
         }
@@ -154,14 +183,21 @@ export function parseMarkdown(src: string): MdNode[] {
 }
 
 export function renderInlineToHtml(inlines: Inline[]): string {
-    return inlines.map((n) => {
-        const t = escapeHtml(n.text);
-        switch (n.kind) {
-            case "bold": return `<strong>${t}</strong>`;
-            case "italic": return `<em>${t}</em>`;
-            case "code": return `<code>${t}</code>`;
-            case "link": return `<a href="${escapeHtml(n.href || "#")}" target="_blank" rel="noopener">${t}</a>`;
-            default: return t;
-        }
-    }).join("");
+    return inlines
+        .map((n) => {
+            const t = escapeHtml(n.text);
+            switch (n.kind) {
+                case "bold":
+                    return `<strong>${t}</strong>`;
+                case "italic":
+                    return `<em>${t}</em>`;
+                case "code":
+                    return `<code>${t}</code>`;
+                case "link":
+                    return `<a href="${escapeHtml(n.href || "#")}" target="_blank" rel="noopener">${t}</a>`;
+                default:
+                    return t;
+            }
+        })
+        .join("");
 }

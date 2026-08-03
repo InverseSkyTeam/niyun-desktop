@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from "vue";
 import Button from "./Button.vue";
+import { css } from "../lib/css";
 
 export interface AiModelGroup {
     providerId: string;
@@ -61,9 +62,7 @@ function pickModel(m: string) {
 </script>
 
 <template>
-    <div
-        class="shrink-0 border-t border-brand-200/40 bg-white px-6 py-4 dark:border-brand-700/40 dark:bg-brand-900"
-    >
+    <div class="shrink-0 px-6 py-4">
         <div class="mx-auto max-w-3xl">
             <div
                 class="flex flex-col rounded-xl border border-brand-200 bg-brand-50 transition focus-within:border-brand-400 focus-within:ring-2 focus-within:ring-brand-200 dark:border-brand-700 dark:bg-brand-800 dark:focus-within:border-brand-500 dark:focus-within:ring-brand-700"
@@ -127,14 +126,11 @@ function pickModel(m: string) {
                                         :key="g.providerId"
                                     >
                                         <li
-                                            class="px-2.5 py-1 text-[10px] font-medium uppercase tracking-wider text-brand-400 dark:text-brand-500"
+                                            class="px-2.5 py-1 text-[10px] font-medium tracking-wider text-brand-400 uppercase dark:text-brand-500"
                                         >
                                             {{ g.providerName }}
                                         </li>
-                                        <li
-                                            v-for="m in g.models"
-                                            :key="m.id"
-                                        >
+                                        <li v-for="m in g.models" :key="m.id">
                                             <button
                                                 type="button"
                                                 role="option"
@@ -143,9 +139,11 @@ function pickModel(m: string) {
                                                 "
                                                 class="flex w-full items-center justify-between gap-2 rounded-md px-2.5 py-2 text-left text-xs transition"
                                                 :class="
-                                                    m.id === aiModel
-                                                        ? 'bg-brand-200/60 font-medium text-black dark:bg-brand-50 dark:text-brand-900'
-                                                        : 'text-brand-700 hover:bg-brand-100 dark:text-brand-300 dark:hover:bg-brand-700'
+                                                    css(
+                                                        m.id === aiModel
+                                                            ? 'bg-brand-200/60 font-medium text-black dark:bg-brand-50 dark:text-brand-900'
+                                                            : 'text-brand-700 hover:bg-brand-100 dark:text-brand-300 dark:hover:bg-brand-700',
+                                                    )
                                                 "
                                                 @click="pickModel(m.id)"
                                             >
@@ -162,9 +160,7 @@ function pickModel(m: string) {
                                                     stroke-linecap="round"
                                                     stroke-linejoin="round"
                                                 >
-                                                    <path
-                                                        d="M20 6 9 17l-5-5"
-                                                    />
+                                                    <path d="M20 6 9 17l-5-5" />
                                                 </svg>
                                             </button>
                                         </li>

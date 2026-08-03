@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
+import { css } from "../lib/css";
 
 const props = withDefaults(
     defineProps<{
@@ -13,7 +14,7 @@ const props = withDefaults(
         size: "default",
         disabled: false,
         class: "",
-    }
+    },
 );
 
 const emit = defineEmits<{
@@ -23,8 +24,7 @@ const emit = defineEmits<{
 const checked = computed(() => props.modelValue);
 
 function toggle() {
-    if (props.disabled) return;
-    emit("update:modelValue", !checked.value);
+    if (!props.disabled) emit("update:modelValue", !checked.value);
 }
 </script>
 
@@ -35,32 +35,38 @@ function toggle() {
         :aria-checked="checked"
         :disabled="disabled"
         :data-checked="checked ? '' : undefined"
-        :data-unchecked="!checked ? '' : undefined"
         :data-size="size"
-        :data-disabled="disabled ? '' : undefined"
         :class="[
-            'peer group/switch relative inline-flex shrink-0 items-center rounded-full border border-transparent transition-all outline-none',
-            'after:absolute after:-inset-x-3 after:-inset-y-2',
-            'focus-visible:border-brand-400 focus-visible:ring-3 focus-visible:ring-brand-200/50',
+            'peer relative inline-flex shrink-0 items-center rounded-full transition-all outline-none',
+            css(
+                checked
+                    ? 'bg-gradient-to-r from-brand-600 to-brand-800 shadow-glow'
+                    : 'bg-brand-200 dark:bg-white/15',
+            ),
+            css(
+                checked
+                    ? 'data-[size=default]:h-5 data-[size=default]:w-9'
+                    : '',
+            ),
+            css(checked ? 'data-[size=sm]:h-4 data-[size=sm]:w-7' : ''),
+            css(size === 'default' ? 'h-5 w-9' : 'h-4 w-7'),
             'data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50',
-            'data-[size=default]:h-[18.4px] data-[size=default]:w-[32px]',
-            'data-[size=sm]:h-[14px] data-[size=sm]:w-[24px]',
-            'data-[checked]:bg-brand-900 dark:data-[checked]:bg-brand-50',
-            'data-[unchecked]:bg-brand-300 dark:data-[unchecked]:bg-brand-700',
+            'focus-visible:ring-3 focus-visible:ring-brand-300/50',
             props.class,
         ]"
         @click="toggle"
     >
         <span
-            data-slot="switch-thumb"
+            class="pointer-events-none block rounded-full bg-white shadow-sm transition-transform"
             :class="[
-                'pointer-events-none block rounded-full bg-white ring-0 transition-transform shadow',
-                'group-data-[size=default]/switch:size-4',
-                'group-data-[size=sm]/switch:size-3',
-                'group-data-[size=default]/switch:group-data-[checked]/switch:translate-x-[calc(100%-2px)]',
-                'group-data-[size=sm]/switch:group-data-[checked]/switch:translate-x-[calc(100%-2px)]',
-                'group-data-[size=default]/switch:group-data-[unchecked]/switch:translate-x-0.5',
-                'group-data-[size=sm]/switch:group-data-[unchecked]/switch:translate-x-0.5',
+                css(size === 'default' ? 'size-4' : 'size-3'),
+                css(
+                    checked
+                        ? size === 'default'
+                            ? 'translate-x-4'
+                            : 'translate-x-3'
+                        : 'translate-x-0.5',
+                ),
             ]"
         />
     </button>

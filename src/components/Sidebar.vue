@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import type { Conversation } from "../types";
+import type { Conversation } from "../lib/types";
 import Button from "./Button.vue";
 import NiyunAvatar from "./NiyunAvatar.vue";
+import { css } from "../lib/css";
 
 defineProps<{
     conversations: Conversation[];
     activeId: string | null;
+    isStreaming: (id: string) => boolean;
 }>();
 
 const emit = defineEmits<{
@@ -15,12 +17,11 @@ const emit = defineEmits<{
     (e: "open-settings"): void;
     (e: "open-galgame"): void;
 }>();
-
 </script>
 
 <template>
     <aside
-        class="flex w-60 shrink-0 flex-col border-r border-brand-200 bg-brand-50 dark:border-brand-700 dark:bg-brand-800"
+        class="flex w-60 shrink-0 flex-col border-r border-brand-200/50 bg-white/60 backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.03]"
     >
         <div
             data-tauri-drag-region
@@ -54,28 +55,37 @@ const emit = defineEmits<{
 
         <div class="mt-3 flex-1 scrollbar-thin overflow-y-auto px-2.5">
             <p
-                class="px-2 pb-1.5 text-[10px] font-semibold tracking-wider text-brand-400 uppercase dark:text-brand-500"
+                class="px-2 pb-1.5 text-[10px] font-semibold tracking-wider text-brand-400 uppercase dark:text-brand-400/60"
             >
                 会话
             </p>
             <ul class="space-y-0.5">
                 <li v-for="c in conversations" :key="c.id">
                     <div
-                        class="group flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2.5 transition"
+                        class="group flex cursor-pointer items-center gap-2 rounded-xl px-3 py-2.5 transition"
                         :class="
-                            c.id === activeId
-                                ? 'bg-brand-200/60 text-black dark:bg-brand-50 dark:text-brand-900'
-                                : 'text-brand-700 hover:bg-brand-100 dark:text-brand-300 dark:hover:bg-brand-700'
+                            css(
+                                c.id === activeId
+                                    ? 'bg-gradient-to-r from-brand-500/15 to-brand-700/10 text-brand-700 shadow-soft dark:from-brand-500/20 dark:to-brand-700/10 dark:text-brand-100'
+                                    : 'text-brand-700 hover:bg-white/60 dark:text-brand-300 dark:hover:bg-white/5',
+                            )
                         "
                         @click="emit('select', c.id)"
                     >
                         <div class="min-w-0 flex-1">
-                            <p
-                                class="truncate text-[13px] leading-tight font-medium"
-                            >
-                                {{ c.title }}
-                            </p>
+                            <div class="flex items-center gap-1.5">
+                                <span
+                                    v-if="isStreaming(c.id)"
+                                    class="inline-block size-1.5 shrink-0 animate-pulse rounded-full bg-gradient-to-br from-brand-500 to-brand-700 shadow-[0_0_6px_rgba(140,107,230,0.6)]"
+                                    aria-label="正在输出"
+                                />
+                                <p
+                                    class="truncate text-[13px] leading-tight font-medium"
+                                >
+                                    {{ c.title }}
+                                </p>
                             </div>
+                        </div>
 
                         <button
                             type="button"
@@ -102,10 +112,13 @@ const emit = defineEmits<{
             </ul>
         </div>
 
-        <div
-            class="border-t border-brand-200/40 p-2.5 dark:border-brand-700/40"
-        >
-            <Button variant="ghost" block @click="emit('open-galgame')" align="start">
+        <div class="border-t border-brand-200/50 p-2.5 dark:border-white/10">
+            <Button
+                variant="ghost"
+                block
+                align="start"
+                @click="emit('open-galgame')"
+            >
                 <svg
                     viewBox="0 0 24 24"
                     class="size-4"
@@ -120,7 +133,12 @@ const emit = defineEmits<{
                 </svg>
                 视觉小说
             </Button>
-            <Button variant="ghost" block @click="emit('open-settings')" align="start">
+            <Button
+                variant="ghost"
+                block
+                align="start"
+                @click="emit('open-settings')"
+            >
                 <svg
                     viewBox="0 0 24 24"
                     class="size-4"

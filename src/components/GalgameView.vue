@@ -5,11 +5,14 @@ import {
     type Scenario,
     type ScenarioNode,
     type ScenarioChoice,
-} from "../scenarios";
+} from "../lib/scenarios";
 
 const emit = defineEmits<{
     (e: "back"): void;
-    (e: "galgame-effect", payload: { moodDelta: number; hungerDelta: number }): void;
+    (
+        e: "galgame-effect",
+        payload: { moodDelta: number; hungerDelta: number },
+    ): void;
 }>();
 
 const screen = ref<"menu" | "play">("menu");
@@ -131,7 +134,11 @@ onUnmounted(() => {
 
 <template>
     <div class="galgame-root">
-        <button v-if="screen === 'menu'" class="back-btn" @click="$emit('back')">
+        <button
+            v-if="screen === 'menu'"
+            class="back-btn"
+            @click="$emit('back')"
+        >
             <span class="back-arrow">←</span>
             <span>返回聊天</span>
         </button>

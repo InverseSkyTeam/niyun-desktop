@@ -37,7 +37,7 @@ async function initTables() {
 export async function loadConversations(): Promise<Conversation[]> {
     const d = await getDb();
     const rows = await d.select<Record<string, unknown>[]>(
-        "SELECT id, title, system_prompt, created_at, last_active FROM conversations ORDER BY last_active DESC"
+        "SELECT id, title, system_prompt, created_at, last_active FROM conversations ORDER BY last_active DESC",
     );
     return rows.map((r) => ({
         id: r.id as string,
@@ -51,19 +51,19 @@ export async function loadConversations(): Promise<Conversation[]> {
 export async function createConversation(
     id: string,
     title: string,
-    systemPrompt: string
+    systemPrompt: string,
 ): Promise<void> {
     const d = await getDb();
     const now = Date.now();
     await d.execute(
         "INSERT INTO conversations (id, title, system_prompt, created_at, last_active) VALUES ($1, $2, $3, $4, $5)",
-        [id, title, systemPrompt, now, now]
+        [id, title, systemPrompt, now, now],
     );
 }
 
 export async function updateConversation(
     id: string,
-    data: { title?: string; systemPrompt?: string }
+    data: { title?: string; systemPrompt?: string },
 ): Promise<void> {
     const d = await getDb();
     const sets: string[] = [];
@@ -80,7 +80,7 @@ export async function updateConversation(
     params.push(id);
     await d.execute(
         `UPDATE conversations SET ${sets.join(", ")} WHERE id = $${params.length}`,
-        params
+        params,
     );
 }
 
@@ -99,12 +99,12 @@ export async function touchConversation(id: string): Promise<void> {
 }
 
 export async function loadMessages(
-    conversationId: string
+    conversationId: string,
 ): Promise<ChatMessage[]> {
     const d = await getDb();
     const rows = await d.select<Record<string, unknown>[]>(
         "SELECT id, role, content, created_at FROM messages WHERE conversation_id = $1 ORDER BY created_at ASC",
-        [conversationId]
+        [conversationId],
     );
     return rows.map((r) => ({
         id: r.id as string,
@@ -116,18 +116,18 @@ export async function loadMessages(
 
 export async function addMessage(
     conversationId: string,
-    msg: ChatMessage
+    msg: ChatMessage,
 ): Promise<void> {
     const d = await getDb();
     await d.execute(
         "INSERT INTO messages (id, conversation_id, role, content, created_at) VALUES ($1, $2, $3, $4, $5)",
-        [msg.id, conversationId, msg.role, msg.content, msg.createdAt]
+        [msg.id, conversationId, msg.role, msg.content, msg.createdAt],
     );
 }
 
 export async function updateMessage(
     id: string,
-    content: string
+    content: string,
 ): Promise<void> {
     const d = await getDb();
     await d.execute("UPDATE messages SET content = $1 WHERE id = $2", [
@@ -136,13 +136,11 @@ export async function updateMessage(
     ]);
 }
 
-export async function getSystemPrompt(
-    conversationId: string
-): Promise<string> {
+export async function getSystemPrompt(conversationId: string): Promise<string> {
     const d = await getDb();
     const rows = await d.select<Record<string, unknown>[]>(
         "SELECT system_prompt FROM conversations WHERE id = $1",
-        [conversationId]
+        [conversationId],
     );
     if (rows.length > 0) return (rows[0].system_prompt as string) || "";
     return "";
@@ -150,7 +148,7 @@ export async function getSystemPrompt(
 
 export async function setSystemPrompt(
     conversationId: string,
-    prompt: string
+    prompt: string,
 ): Promise<void> {
     await updateConversation(conversationId, { systemPrompt: prompt });
 }

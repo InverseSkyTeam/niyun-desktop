@@ -1,8 +1,19 @@
-import { UapiClient } from 'uapi-browser-sdk';
+import { UapiClient } from "uapi-browser-sdk";
 
-const uapi = new UapiClient('https://uapis.cn', 'uapi-_ibhj0ggpbpLj0AHTvsiGbFjxsyP_D3TOJg3ryUI');
+const uapi = new UapiClient(
+    "https://uapis.cn",
+    "uapi-_ibhj0ggpbpLj0AHTvsiGbFjxsyP_D3TOJg3ryUI",
+);
 
-export type WeatherKind = "clear" | "cloudy" | "rain" | "snow" | "thunder" | "fog" | "sandstorm" | "unknown";
+export type WeatherKind =
+    | "clear"
+    | "cloudy"
+    | "rain"
+    | "snow"
+    | "thunder"
+    | "fog"
+    | "sandstorm"
+    | "unknown";
 
 export interface WeatherParticle {
     left: number;
@@ -17,7 +28,12 @@ export interface WeatherCG {
     description: string;
     particle: string;
     count: number;
-    animation: "weather-fall" | "weather-fall-slow" | "weather-fall-fast" | "weather-flash" | "weather-drift";
+    animation:
+        | "weather-fall"
+        | "weather-fall-slow"
+        | "weather-fall-fast"
+        | "weather-flash"
+        | "weather-drift";
     city: string;
     temperature: number;
     weather: string;
@@ -72,13 +88,22 @@ function classifyByText(text: string): WeatherKind {
     if (t.includes("雷") || t.includes("闪电")) return "thunder";
     if (t.includes("雪")) return "snow";
     if (t.includes("雨")) return "rain";
-    if (t.includes("雾") || t.includes("霾") || t.includes("沙") || t.includes("扬")) return "fog";
+    if (
+        t.includes("雾") ||
+        t.includes("霾") ||
+        t.includes("沙") ||
+        t.includes("扬")
+    )
+        return "fog";
     if (t.includes("阴") || t.includes("云")) return "cloudy";
     if (t.includes("晴")) return "clear";
     return "unknown";
 }
 
-export function classifyWeather(weatherText: string, icon: number | string | undefined): WeatherKind {
+export function classifyWeather(
+    weatherText: string,
+    icon: number | string | undefined,
+): WeatherKind {
     if (icon !== undefined) {
         const n = typeof icon === "string" ? parseInt(icon, 10) : icon;
         if (!Number.isNaN(n)) {
@@ -89,15 +114,63 @@ export function classifyWeather(weatherText: string, icon: number | string | und
     return classifyByText(weatherText);
 }
 
-const KIND_CONFIG: Record<WeatherKind, { particle: string; count: number; animation: WeatherCG["animation"]; label: string }> = {
-    clear: { particle: "✨", count: 6, animation: "weather-fall-slow", label: "晴天" },
-    cloudy: { particle: "☁️", count: 5, animation: "weather-drift", label: "多云" },
-    rain: { particle: "💧", count: 22, animation: "weather-fall", label: "下雨" },
-    snow: { particle: "❄️", count: 18, animation: "weather-fall-slow", label: "下雪" },
-    thunder: { particle: "⚡", count: 8, animation: "weather-flash", label: "雷雨" },
-    fog: { particle: "🌫️", count: 4, animation: "weather-drift", label: "雾霾" },
-    sandstorm: { particle: "🟤", count: 12, animation: "weather-fall-fast", label: "沙尘" },
-    unknown: { particle: "", count: 0, animation: "weather-fall-slow", label: "未知" },
+const KIND_CONFIG: Record<
+    WeatherKind,
+    {
+        particle: string;
+        count: number;
+        animation: WeatherCG["animation"];
+        label: string;
+    }
+> = {
+    clear: {
+        particle: "✨",
+        count: 6,
+        animation: "weather-fall-slow",
+        label: "晴天",
+    },
+    cloudy: {
+        particle: "☁️",
+        count: 5,
+        animation: "weather-drift",
+        label: "多云",
+    },
+    rain: {
+        particle: "💧",
+        count: 22,
+        animation: "weather-fall",
+        label: "下雨",
+    },
+    snow: {
+        particle: "❄️",
+        count: 18,
+        animation: "weather-fall-slow",
+        label: "下雪",
+    },
+    thunder: {
+        particle: "⚡",
+        count: 8,
+        animation: "weather-flash",
+        label: "雷雨",
+    },
+    fog: {
+        particle: "🌫️",
+        count: 4,
+        animation: "weather-drift",
+        label: "雾霾",
+    },
+    sandstorm: {
+        particle: "🟤",
+        count: 12,
+        animation: "weather-fall-fast",
+        label: "沙尘",
+    },
+    unknown: {
+        particle: "",
+        count: 0,
+        animation: "weather-fall-slow",
+        label: "未知",
+    },
 };
 
 function buildSummary(raw: RawWeatherResponse): WeatherSummary | null {
@@ -105,10 +178,16 @@ function buildSummary(raw: RawWeatherResponse): WeatherSummary | null {
     return {
         city: raw.city || raw.district || "未知城市",
         weather: raw.weather || "未知",
-        temperature: typeof raw.temperature === "number" ? raw.temperature : Number(raw.temperature ?? NaN),
+        temperature:
+            typeof raw.temperature === "number"
+                ? raw.temperature
+                : Number(raw.temperature ?? NaN),
         wind_direction: raw.wind_direction || "",
         wind_power: raw.wind_power || "",
-        humidity: typeof raw.humidity === "number" ? raw.humidity : Number(raw.humidity ?? NaN),
+        humidity:
+            typeof raw.humidity === "number"
+                ? raw.humidity
+                : Number(raw.humidity ?? NaN),
         report_time: raw.report_time || "",
     };
 }
@@ -118,10 +197,16 @@ function buildCG(raw: RawWeatherResponse, kind: WeatherKind): WeatherCG | null {
     const cfg = KIND_CONFIG[kind];
     const summary = buildSummary(raw);
     if (!summary) return null;
-    const tempDesc = summary.temperature >= 30 ? "热得发昏" :
-                     summary.temperature >= 20 ? "挺舒服" :
-                     summary.temperature >= 10 ? "有点凉" :
-                     summary.temperature >= 0  ? "冷飕飕" : "冻死啦";
+    const tempDesc =
+        summary.temperature >= 30
+            ? "热得发昏"
+            : summary.temperature >= 20
+              ? "挺舒服"
+              : summary.temperature >= 10
+                ? "有点凉"
+                : summary.temperature >= 0
+                  ? "冷飕飕"
+                  : "冻死啦";
     return {
         kind,
         label: cfg.label,
@@ -165,10 +250,14 @@ export function generateWeatherParticles(cg: WeatherCG): WeatherParticle[] {
         arr.push({
             left: Math.random() * 100,
             delay: Math.random() * (cg.kind === "thunder" ? 3 : 5),
-            duration: cg.kind === "rain" ? 0.8 + Math.random() * 0.6
-                : cg.kind === "snow" ? 4 + Math.random() * 3
-                : cg.kind === "thunder" ? 0.5 + Math.random() * 0.4
-                : 4 + Math.random() * 3,
+            duration:
+                cg.kind === "rain"
+                    ? 0.8 + Math.random() * 0.6
+                    : cg.kind === "snow"
+                      ? 4 + Math.random() * 3
+                      : cg.kind === "thunder"
+                        ? 0.5 + Math.random() * 0.4
+                        : 4 + Math.random() * 3,
             size: sizeBase + Math.random() * sizeRand,
         });
     }
