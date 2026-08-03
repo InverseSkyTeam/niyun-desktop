@@ -478,37 +478,13 @@ watch(
 
                     <div class="flex flex-col items-center py-6 text-center">
                         <div
-                            class="flex size-16 items-center justify-center rounded-2xl bg-brand-900 dark:bg-brand-50"
+                            class="flex size-16 items-center justify-center"
                         >
-                            <svg
-                                viewBox="0 0 24 24"
-                                class="size-10 text-brand-50 dark:text-brand-900"
-                                fill="none"
-                                aria-hidden="true"
-                            >
-                                <circle
-                                    cx="9"
-                                    cy="10"
-                                    r="1.5"
-                                    fill="currentColor"
-                                />
-                                <circle
-                                    cx="15"
-                                    cy="10"
-                                    r="1.5"
-                                    fill="currentColor"
-                                />
-                                <path
-                                    d="M9 14.5c1 1.2 5 1.2 6 0"
-                                    stroke="currentColor"
-                                    stroke-width="1.5"
-                                    stroke-linecap="round"
-                                />
-                            </svg>
+                            <NiyunAvatar :size="72" />
                         </div>
-                        <h3 class="mt-3 text-base font-semibold">桌宠</h3>
+                        <h3 class="mt-3 text-base font-semibold">逆云桌宠 学习版</h3>
                         <p class="text-xs text-brand-500 dark:text-brand-400">
-                            AI 对话桌宠应用
+                            可以用来学习的逆云桌宠~
                         </p>
                         <p
                             class="mt-1 font-mono text-[11px] text-brand-400 dark:text-brand-500"
@@ -520,22 +496,6 @@ watch(
                     <div
                         class="space-y-2 border-t border-brand-200/40 pt-4 dark:border-brand-700/40"
                     >
-                        <div
-                            class="flex items-center justify-between text-[13px]"
-                        >
-                            <span class="text-brand-500 dark:text-brand-400"
-                                >框架</span
-                            >
-                            <span>Tauri 2 + Vue 3</span>
-                        </div>
-                        <div
-                            class="flex items-center justify-between text-[13px]"
-                        >
-                            <span class="text-brand-500 dark:text-brand-400"
-                                >样式</span
-                            >
-                            <span>Tailwind CSS 4</span>
-                        </div>
                         <div
                             class="flex items-center justify-between text-[13px]"
                         >
