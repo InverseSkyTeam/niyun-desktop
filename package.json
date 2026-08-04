@@ -3,6 +3,7 @@
     "version": "0.1.0",
     "private": true,
     "type": "module",
+    "description": "一款基于 Tauri + Vue 3 的桌面 AI 桌宠应用:多模型对话、桌宠养成、工具审批与剧情模式于一体的轻量原生客户端",
     "scripts": {
         "dev": "vite",
         "build": "vue-tsc --noEmit && vite build",
