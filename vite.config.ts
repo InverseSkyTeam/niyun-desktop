@@ -29,4 +29,24 @@ export default defineConfig(async () => ({
             ignored: ["**/src-tauri/**"],
         },
     },
+    build: {
+        rollupOptions: {
+            output: {
+                manualChunks(id: string) {
+                    if (
+                        id.includes("node_modules/vue") ||
+                        id.includes("node_modules/@vue")
+                    ) {
+                        return "vue";
+                    }
+                    if (
+                        id.includes("node_modules/ai") ||
+                        id.includes("node_modules/@tauri-apps/plugin-http")
+                    ) {
+                        return "ai";
+                    }
+                },
+            },
+        },
+    },
 }));

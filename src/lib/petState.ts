@@ -1,3 +1,5 @@
+export type Mood = "neutral" | "happy" | "shy" | "angry" | "sleepy";
+
 export interface PetStats {
     hunger: number;
     mood: number;

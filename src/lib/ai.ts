@@ -4,11 +4,6 @@ import {
     type ModelMessage,
     type ToolApprovalResponse,
 } from "ai";
-import { createDeepSeek } from "@ai-sdk/deepseek";
-import { createOpenAI } from "@ai-sdk/openai";
-import { createAnthropic } from "@ai-sdk/anthropic";
-import { createMoonshotAI } from "@ai-sdk/moonshotai";
-import { createZhipu } from "zhipu-ai-provider";
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import type { AIProviderConfig, AIConfig } from "./types";
 import { createDefaultAIConfig } from "./types";
@@ -32,32 +27,42 @@ export function saveAIConfig(config: AIConfig): void {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
 }
 
-function createProvider(config: AIProviderConfig) {
+async function createProvider(config: AIProviderConfig) {
     const opts = {
         apiKey: config.apiKey,
         baseURL: config.baseUrl,
         fetch: aiFetch,
     };
     switch (config.id) {
-        case "deepseek":
+        case "deepseek": {
+            const { createDeepSeek } = await import("@ai-sdk/deepseek");
             return createDeepSeek(opts);
-        case "zhipu":
+        }
+        case "zhipu": {
+            const { createZhipu } = await import("zhipu-ai-provider");
             return createZhipu(opts);
-        case "moonshot":
+        }
+        case "moonshot": {
+            const { createMoonshotAI } = await import("@ai-sdk/moonshotai");
             return createMoonshotAI(opts);
-        case "openai":
+        }
+        case "openai": {
+            const { createOpenAI } = await import("@ai-sdk/openai");
             return createOpenAI(opts);
-        case "anthropic":
+        }
+        case "anthropic": {
+            const { createAnthropic } = await import("@ai-sdk/anthropic");
             return createAnthropic(opts);
+        }
     }
 }
 
-function getProvider(activeModel: string) {
+async function getProvider(activeModel: string) {
     const config = loadAIConfig();
     const [providerId, modelId] = activeModel.split(":");
     const providerConfig = config.providers.find((p) => p.id === providerId);
     if (!providerConfig) throw new Error(`未找到 AI 厂商: ${providerId}`);
-    const provider = createProvider(providerConfig);
+    const provider = await createProvider(providerConfig);
     if (!provider) throw new Error(`不支持的 AI 厂商: ${providerId}`);
     return { provider, modelId, systemPrompt: "" };
 }
@@ -67,7 +72,7 @@ export async function generateReply(
     activeModel: string,
     systemPrompt?: string,
 ): Promise<string> {
-    const { provider, modelId } = getProvider(activeModel);
+    const { provider, modelId } = await getProvider(activeModel);
     const result = streamText({
         model: provider(modelId),
         system: systemPrompt,
@@ -167,7 +172,7 @@ export async function generateWithTools(
     onReasoning?: (chunk: string) => void,
     abortSignal?: AbortSignal,
 ): Promise<GenerateResult> {
-    const { provider, modelId } = getProvider(activeModel);
+    const { provider, modelId } = await getProvider(activeModel);
     const result = streamText({
         model: provider(modelId),
         system: systemPrompt,
@@ -191,7 +196,7 @@ export async function continueWithApprovals(
     onReasoning?: (chunk: string) => void,
     abortSignal?: AbortSignal,
 ): Promise<GenerateResult> {
-    const { provider, modelId } = getProvider(activeModel);
+    const { provider, modelId } = await getProvider(activeModel);
     const result = streamText({
         model: provider(modelId),
         system: systemPrompt,
