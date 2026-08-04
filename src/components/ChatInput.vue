@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from "vue";
 import Button from "./Button.vue";
-import { css } from "../lib/css";
+import { css } from "@/lib/css";
 
 export interface AiModelGroup {
     providerId: string;

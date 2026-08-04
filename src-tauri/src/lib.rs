@@ -510,6 +510,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_sql::Builder::new().build())
+        .plugin(tauri_plugin_http::init())
         .invoke_handler(tauri::generate_handler![
             get_cursor_pos,
             get_desktop_info,

@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import type { ChatMessage } from "../lib/types";
+import type { ChatMessage } from "@/lib/types";
 import NiyunAvatar from "./NiyunAvatar.vue";
-import { parseMarkdown, renderInlineToHtml } from "../lib/markdown";
-import { css } from "../lib/css";
+import { parseMarkdown, renderInlineToHtml } from "@/lib/markdown";
+import { css } from "@/lib/css";
 
 const props = defineProps<{ message: ChatMessage }>();
 const emit = defineEmits<{
@@ -117,16 +117,16 @@ const icon =
                         stroke-linecap="round"
                         stroke-linejoin="round"
                     >
-                        <path d="M9.663 17h4.673M12 3v1m6.364 1.636-.707.707M21 12h-1M4 12H3m3.343-5.657-.707-.707m2.828 9.9a5 5 0 1 1 7.072 0l-.548.547A3.374 3.374 0 0 0 14 18.469V19a2 2 0 1 1-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                        <path
+                            d="M9.663 17h4.673M12 3v1m6.364 1.636-.707.707M21 12h-1M4 12H3m3.343-5.657-.707-.707m2.828 9.9a5 5 0 1 1 7.072 0l-.548.547A3.374 3.374 0 0 0 14 18.469V19a2 2 0 1 1-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+                        />
                     </svg>
                     思考过程
                     <svg
                         viewBox="0 0 24 24"
                         class="ml-auto size-3 transition-transform duration-200"
                         :class="
-                            reasoningOpen || message.pending
-                                ? 'rotate-180'
-                                : ''
+                            reasoningOpen || message.pending ? 'rotate-180' : ''
                         "
                         fill="none"
                         stroke="currentColor"
@@ -140,7 +140,7 @@ const icon =
                 <div
                     v-if="reasoningOpen || message.pending"
                     ref="reasoningBodyEl"
-                    class="reasoning-text scrollbar-thin max-h-40 overflow-y-auto px-3 pb-2.5 text-[11.5px] leading-relaxed whitespace-pre-wrap text-brand-900/70 dark:text-brand-100/70"
+                    class="reasoning-text max-h-40 scrollbar-thin overflow-y-auto px-3 pb-2.5 text-[11.5px] leading-relaxed whitespace-pre-wrap text-brand-900/70 dark:text-brand-100/70"
                 >
                     {{ message.reasoning }}
                 </div>

@@ -9,8 +9,14 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createMoonshotAI } from "@ai-sdk/moonshotai";
 import { createZhipu } from "zhipu-ai-provider";
+import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import type { AIProviderConfig, AIConfig } from "./types";
 import { createDefaultAIConfig } from "./types";
+
+const aiFetch: typeof fetch =
+    typeof window !== "undefined" && "__TAURI_INTERNALS__" in window
+        ? tauriFetch
+        : window.fetch.bind(window);
 
 const STORAGE_KEY = "ai-config";
 
@@ -27,32 +33,22 @@ export function saveAIConfig(config: AIConfig): void {
 }
 
 function createProvider(config: AIProviderConfig) {
+    const opts = {
+        apiKey: config.apiKey,
+        baseURL: config.baseUrl,
+        fetch: aiFetch,
+    };
     switch (config.id) {
         case "deepseek":
-            return createDeepSeek({
-                apiKey: config.apiKey,
-                baseURL: config.baseUrl,
-            });
+            return createDeepSeek(opts);
         case "zhipu":
-            return createZhipu({
-                apiKey: config.apiKey,
-                baseURL: config.baseUrl,
-            });
+            return createZhipu(opts);
         case "moonshot":
-            return createMoonshotAI({
-                apiKey: config.apiKey,
-                baseURL: config.baseUrl,
-            });
+            return createMoonshotAI(opts);
         case "openai":
-            return createOpenAI({
-                apiKey: config.apiKey,
-                baseURL: config.baseUrl,
-            });
+            return createOpenAI(opts);
         case "anthropic":
-            return createAnthropic({
-                apiKey: config.apiKey,
-                baseURL: config.baseUrl,
-            });
+            return createAnthropic(opts);
     }
 }
 

@@ -1,9 +1,17 @@
 <script setup lang="ts">
-import { computed, markRaw, onMounted, onUnmounted, reactive, ref, watch } from "vue";
+import {
+    computed,
+    markRaw,
+    onMounted,
+    onUnmounted,
+    reactive,
+    ref,
+    watch,
+} from "vue";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { emit, listen, type UnlistenFn } from "@tauri-apps/api/event";
-import type { ChatMessage, Conversation } from "./lib/types";
+import type { ChatMessage, Conversation } from "@/lib/types";
 import {
     loadAIConfig,
     saveAIConfig,
@@ -12,11 +20,15 @@ import {
     continueWithApprovals,
     type AIChatMessage,
     type GenerateResult,
-} from "./lib/ai";
+} from "@/lib/ai";
 import type { ToolApprovalResponse, ToolSet } from "ai";
-import { allTools, looksLikeProjectRequest, toolApprovalConfig } from "./lib/tools";
-import type { ToolApprovalRequest } from "./lib/types";
-import ToolApprovalBar from "./components/ToolApprovalBar.vue";
+import {
+    allTools,
+    looksLikeProjectRequest,
+    toolApprovalConfig,
+} from "@/lib/tools";
+import type { ToolApprovalRequest } from "@/lib/types";
+import ToolApprovalBar from "@/components/ToolApprovalBar.vue";
 import {
     loadConversations as dbLoadConversations,
     createConversation,
@@ -26,7 +38,7 @@ import {
     updateMessage,
     touchConversation,
     getSystemPrompt,
-} from "./lib/db";
+} from "@/lib/db";
 import {
     loadStats,
     saveStats,
@@ -35,16 +47,16 @@ import {
     chatBoost,
     petBoost,
     type PetStats,
-} from "./lib/petState";
-import { fetchWeather, type WeatherCG } from "./lib/weather";
-import { getDesktopInfo, desktopInfoToPrompt } from "./lib/desktopInfo";
-import Sidebar from "./components/Sidebar.vue";
-import TitleBar from "./components/TitleBar.vue";
-import MessageList from "./components/MessageList.vue";
-import ChatInput from "./components/ChatInput.vue";
-import Settings from "./components/Settings.vue";
-import PetOverlay from "./components/PetOverlay.vue";
-import GalgameView from "./components/GalgameView.vue";
+} from "@/lib/petState";
+import { fetchWeather, type WeatherCG } from "@/lib/weather";
+import { getDesktopInfo, desktopInfoToPrompt } from "@/lib/desktopInfo";
+import Sidebar from "@/components/Sidebar.vue";
+import TitleBar from "@/components/TitleBar.vue";
+import MessageList from "@/components/MessageList.vue";
+import ChatInput from "@/components/ChatInput.vue";
+import Settings from "@/components/Settings.vue";
+import PetOverlay from "@/components/PetOverlay.vue";
+import GalgameView from "@/components/GalgameView.vue";
 
 const isPetView =
     new URLSearchParams(window.location.search).get("view") === "pet";
@@ -94,7 +106,7 @@ const conversations = ref<Conversation[]>([]);
 const activeId = ref<string | null>(null);
 const allMessages = reactive<Record<string, ChatMessage[]>>({});
 const messages = computed<ChatMessage[]>(() =>
-    activeId.value ? allMessages[activeId.value] ?? [] : [],
+    activeId.value ? (allMessages[activeId.value] ?? []) : [],
 );
 const input = ref("");
 const view = ref<"chat" | "settings" | "galgame">("chat");
@@ -259,7 +271,7 @@ const aiConfig = ref(loadAIConfig());
 const activeModel = ref(aiConfig.value.activeModel);
 
 const aiModelGroups = computed(() => {
-    const config = loadAIConfig();
+    const config = aiConfig.value;
     return config.providers
         .filter((p) => p.enabled)
         .map((p) => ({
@@ -524,7 +536,8 @@ async function sendMessage() {
         state.systemPrompt = systemPrompt;
 
         if (history.length === 0) {
-            state.target!.content = "咦？消息历史是空的，我一时不知道该怎么接话……";
+            state.target!.content =
+                "咦？消息历史是空的，我一时不知道该怎么接话……";
             state.target!.pending = false;
             await updateMessage(pendingId, state.target!.content);
             return;
@@ -716,8 +729,7 @@ async function stopGeneration() {
         state.stopped = true;
         try {
             abortControllers.get(convId)?.abort();
-        } catch {
-        }
+        } catch {}
         abortControllers.delete(convId);
         state.approvals = [];
         state.resolver?.(false);
@@ -909,6 +921,13 @@ watch(
     },
     { deep: true },
 );
+
+watch(view, (v) => {
+    if (v === "chat") {
+        aiConfig.value = loadAIConfig();
+        activeModel.value = aiConfig.value.activeModel;
+    }
+});
 
 onUnmounted(() => {
     if (moodTimer) clearTimeout(moodTimer);

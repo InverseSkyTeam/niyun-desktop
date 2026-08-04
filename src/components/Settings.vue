@@ -3,9 +3,9 @@ import { ref, reactive, watch } from "vue";
 import Button from "./Button.vue";
 import Switch from "./Switch.vue";
 import NiyunAvatar from "./NiyunAvatar.vue";
-import { css } from "../lib/css";
-import { loadAIConfig, saveAIConfig } from "../lib/ai";
-import type { AIConfig } from "../lib/types";
+import { css } from "@/lib/css";
+import { loadAIConfig, saveAIConfig } from "@/lib/ai";
+import type { AIConfig } from "@/lib/types";
 
 defineProps<{
     theme: "light" | "dark";
@@ -40,8 +40,49 @@ const reminderInterval = ref(
 const aiConfig = reactive<AIConfig>(loadAIConfig());
 
 function toggleModel(providerIndex: number, modelIndex: number) {
-    aiConfig.providers[providerIndex].models[modelIndex].enabled =
-        !aiConfig.providers[providerIndex].models[modelIndex].enabled;
+    const provider = aiConfig.providers[providerIndex];
+    const model = provider.models[modelIndex];
+    model.enabled = !model.enabled;
+    if (model.enabled && !provider.enabled) {
+        provider.enabled = true;
+    }
+}
+
+function removeModel(providerIndex: number, modelIndex: number) {
+    aiConfig.providers[providerIndex].models.splice(modelIndex, 1);
+}
+
+const showAddModel = ref<Record<string, boolean>>({});
+const newModelId = ref<Record<string, string>>({});
+const newModelName = ref<Record<string, string>>({});
+
+function startAddModel(providerId: string) {
+    showAddModel.value[providerId] = true;
+    newModelId.value[providerId] = "";
+    newModelName.value[providerId] = "";
+}
+
+function cancelAddModel(providerId: string) {
+    showAddModel.value[providerId] = false;
+    newModelId.value[providerId] = "";
+    newModelName.value[providerId] = "";
+}
+
+function addModel(providerIndex: number) {
+    const provider = aiConfig.providers[providerIndex];
+    const id = (newModelId.value[provider.id] || "").trim();
+    const name = (newModelName.value[provider.id] || "").trim();
+    if (!id) return;
+    if (provider.models.some((m) => m.id === id)) {
+        cancelAddModel(provider.id);
+        return;
+    }
+    provider.models.push({
+        id,
+        name: name || id,
+        enabled: false,
+    });
+    cancelAddModel(provider.id);
 }
 
 function saveReminderEnabled(v: boolean) {
@@ -53,20 +94,17 @@ function setReminderInterval(opt: number) {
     localStorage.setItem("reminder-interval", String(opt));
 }
 
-watch(
-    [fontSize, alwaysOnTop, autoStart, windowOpacity],
-    () => {
-        localStorage.setItem(
-            "pet-settings",
-            JSON.stringify({
-                fontSize: fontSize.value,
-                alwaysOnTop: alwaysOnTop.value,
-                autoStart: autoStart.value,
-                windowOpacity: windowOpacity.value,
-            }),
-        );
-    },
-);
+watch([fontSize, alwaysOnTop, autoStart, windowOpacity], () => {
+    localStorage.setItem(
+        "pet-settings",
+        JSON.stringify({
+            fontSize: fontSize.value,
+            alwaysOnTop: alwaysOnTop.value,
+            autoStart: autoStart.value,
+            windowOpacity: windowOpacity.value,
+        }),
+    );
+});
 
 watch(
     aiConfig,
@@ -187,7 +225,9 @@ watch(
                 </ul>
             </div>
 
-            <div class="border-t border-brand-200/50 p-2.5 dark:border-white/10">
+            <div
+                class="border-t border-brand-200/50 p-2.5 dark:border-white/10"
+            >
                 <Button
                     variant="ghost"
                     block
@@ -430,38 +470,103 @@ watch(
                                             class="w-full rounded-lg border border-brand-200/60 bg-white px-2.5 py-1.5 text-xs text-brand-900 placeholder:text-brand-300 focus:border-brand-400 focus:ring-2 focus:ring-brand-200 focus:outline-none dark:border-brand-700 dark:bg-brand-900 dark:text-brand-50 dark:placeholder:text-brand-600 dark:focus:border-brand-500 dark:focus:ring-brand-700"
                                         />
                                     </div>
-                                    <div>
+                                </div>
+                            </template>
+
+                            <div v-if="provider.enabled" class="mt-3">
+                                <label
+                                    class="mb-1.5 flex items-center justify-between text-[11px] font-medium text-brand-500 dark:text-brand-400"
+                                >
+                                    <span>模型</span>
+                                    <button
+                                        v-if="!showAddModel[provider.id]"
+                                        type="button"
+                                        class="rounded-md px-1.5 py-0.5 text-[10px] text-brand-500 transition hover:bg-brand-100 hover:text-brand-700 dark:text-brand-400 dark:hover:bg-brand-700/40 dark:hover:text-brand-200"
+                                        @click="startAddModel(provider.id)"
+                                    >
+                                        + 添加模型
+                                    </button>
+                                </label>
+                                <div class="space-y-1">
+                                    <div
+                                        v-for="(model, mi) in provider.models"
+                                        :key="model.id"
+                                        class="group flex items-center gap-2 rounded-md px-2 py-1.5 transition hover:bg-brand-100/60 dark:hover:bg-brand-700/40"
+                                    >
                                         <label
-                                            class="mb-1.5 block text-[11px] font-medium text-brand-500 dark:text-brand-400"
+                                            class="flex flex-1 cursor-pointer items-center gap-2"
                                         >
-                                            模型
-                                        </label>
-                                        <div class="space-y-1">
-                                            <label
-                                                v-for="(
-                                                    model, mi
-                                                ) in provider.models"
-                                                :key="model.id"
-                                                class="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 transition hover:bg-brand-100/60 dark:hover:bg-brand-700/40"
+                                            <input
+                                                type="checkbox"
+                                                :checked="model.enabled"
+                                                class="size-3.5 accent-brand-900 dark:accent-brand-50"
+                                                @change="toggleModel(pi, mi)"
+                                            />
+                                            <span
+                                                class="text-xs text-brand-700 dark:text-brand-300"
                                             >
-                                                <input
-                                                    type="checkbox"
-                                                    :checked="model.enabled"
-                                                    class="size-3.5 accent-brand-900 dark:accent-brand-50"
-                                                    @change="
-                                                        toggleModel(pi, mi)
-                                                    "
+                                                {{ model.name }}
+                                            </span>
+                                        </label>
+                                        <button
+                                            type="button"
+                                            class="flex size-5 items-center justify-center rounded text-brand-400 opacity-0 transition group-hover:opacity-100 hover:bg-red-500/10 hover:text-red-500 dark:text-brand-500 dark:hover:bg-red-500/20"
+                                            title="删除模型"
+                                            @click="removeModel(pi, mi)"
+                                        >
+                                            <svg
+                                                viewBox="0 0 24 24"
+                                                class="size-3.5"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                stroke-width="2"
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                            >
+                                                <path
+                                                    d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6"
                                                 />
-                                                <span
-                                                    class="text-xs text-brand-700 dark:text-brand-300"
-                                                >
-                                                    {{ model.name }}
-                                                </span>
-                                            </label>
+                                            </svg>
+                                        </button>
+                                    </div>
+
+                                    <div
+                                        v-if="showAddModel[provider.id]"
+                                        class="space-y-1.5 rounded-md border border-brand-200/60 bg-white/60 p-2 dark:border-brand-700 dark:bg-white/[0.02]"
+                                    >
+                                        <input
+                                            v-model="newModelId[provider.id]"
+                                            type="text"
+                                            placeholder="模型 ID (如 gpt-4o)"
+                                            class="w-full rounded-md border border-brand-200/60 bg-white px-2 py-1 text-xs text-brand-900 placeholder:text-brand-300 focus:border-brand-400 focus:ring-1 focus:ring-brand-200 focus:outline-none dark:border-brand-700 dark:bg-brand-900 dark:text-brand-50 dark:placeholder:text-brand-600 dark:focus:border-brand-500 dark:focus:ring-brand-700"
+                                        />
+                                        <input
+                                            v-model="newModelName[provider.id]"
+                                            type="text"
+                                            placeholder="显示名称 (可选,留空用 ID)"
+                                            class="w-full rounded-md border border-brand-200/60 bg-white px-2 py-1 text-xs text-brand-900 placeholder:text-brand-300 focus:border-brand-400 focus:ring-1 focus:ring-brand-200 focus:outline-none dark:border-brand-700 dark:bg-brand-900 dark:text-brand-50 dark:placeholder:text-brand-600 dark:focus:border-brand-500 dark:focus:ring-brand-700"
+                                        />
+                                        <div class="flex gap-1.5">
+                                            <Button
+                                                size="xs"
+                                                variant="primary"
+                                                @click="addModel(pi)"
+                                            >
+                                                保存
+                                            </Button>
+                                            <Button
+                                                size="xs"
+                                                variant="ghost"
+                                                @click="
+                                                    cancelAddModel(provider.id)
+                                                "
+                                            >
+                                                取消
+                                            </Button>
                                         </div>
                                     </div>
                                 </div>
-                            </template>
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -477,12 +582,12 @@ watch(
                     </div>
 
                     <div class="flex flex-col items-center py-6 text-center">
-                        <div
-                            class="flex size-16 items-center justify-center"
-                        >
+                        <div class="flex size-16 items-center justify-center">
                             <NiyunAvatar :size="72" />
                         </div>
-                        <h3 class="mt-3 text-base font-semibold">逆云桌宠 学习版</h3>
+                        <h3 class="mt-3 text-base font-semibold">
+                            逆云桌宠 学习版
+                        </h3>
                         <p class="text-xs text-brand-500 dark:text-brand-400">
                             可以用来学习的逆云桌宠~
                         </p>

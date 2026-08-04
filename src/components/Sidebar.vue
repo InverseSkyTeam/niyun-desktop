@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import type { Conversation } from "../lib/types";
+import type { Conversation } from "@/lib/types";
 import Button from "./Button.vue";
 import NiyunAvatar from "./NiyunAvatar.vue";
-import { css } from "../lib/css";
+import { css } from "@/lib/css";
 
 defineProps<{
     conversations: Conversation[];

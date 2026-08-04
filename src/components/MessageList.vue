@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { nextTick, ref, watch } from "vue";
-import type { ChatMessage } from "../lib/types";
+import type { ChatMessage } from "@/lib/types";
 import Button from "./Button.vue";
 import MessageItem from "./MessageItem.vue";
 

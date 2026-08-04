@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import type { ToolApprovalRequest } from "../lib/types";
-import { toolDescriptions } from "../lib/tools";
+import type { ToolApprovalRequest } from "@/lib/types";
+import { toolDescriptions } from "@/lib/tools";
 import Button from "./Button.vue";
 
 const props = defineProps<{

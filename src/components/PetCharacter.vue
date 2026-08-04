@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
-import type { PetStats } from "../lib/petState";
+import type { PetStats } from "@/lib/petState";
 import {
     getFestival,
     generateParticles,
     type FestivalConfig,
-} from "../lib/festival";
-import { generateWeatherParticles, type WeatherCG } from "../lib/weather";
+} from "@/lib/festival";
+import { generateWeatherParticles, type WeatherCG } from "@/lib/weather";
 
 type Mood = "neutral" | "happy" | "shy" | "angry" | "sleepy";
 

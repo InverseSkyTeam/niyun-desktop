@@ -5,7 +5,7 @@ import {
     type Scenario,
     type ScenarioNode,
     type ScenarioChoice,
-} from "../lib/scenarios";
+} from "@/lib/scenarios";
 
 const emit = defineEmits<{
     (e: "back"): void;

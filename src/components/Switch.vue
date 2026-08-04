@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { css } from "../lib/css";
+import { css } from "@/lib/css";
 
 const props = withDefaults(
     defineProps<{

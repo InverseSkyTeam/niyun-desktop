@@ -3,13 +3,13 @@ import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
-import type { PetStats } from "../lib/petState";
+import type { PetStats } from "@/lib/petState";
 import {
     getFestival,
     generateParticles,
     type FestivalConfig,
-} from "../lib/festival";
-import { generateWeatherParticles, type WeatherCG } from "../lib/weather";
+} from "@/lib/festival";
+import { generateWeatherParticles, type WeatherCG } from "@/lib/weather";
 
 type Mood = "neutral" | "happy" | "shy" | "angry" | "sleepy";
 
