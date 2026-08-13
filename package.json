@@ -4,6 +4,7 @@
     "private": true,
     "type": "module",
     "description": "一款基于 Tauri + React 19 的桌面 AI 桌宠应用:多模型对话、桌宠养成、工具审批与剧情模式于一体的轻量原生客户端",
+    "packageManager": "pnpm@11.21.0",
     "scripts": {
         "dev": "vite",
         "build": "tsc --noEmit && vite build",
@@ -25,6 +26,7 @@
         "@tauri-apps/plugin-sql": "^2.4.0",
         "ai": "^7.0.48",
         "clsx": "^2.1.1",
+        "highlight.js": "^11.9.0",
         "lucide-react": "^1.31.0",
         "react": "^19.2.8",
         "react-dom": "^19.2.8",
@@ -36,6 +38,7 @@
         "tailwind-merge": "^3.6.0",
         "tailwindcss": "^4.3.3",
         "zhipu-ai-provider": "^0.4.0",
+        "zod": "^4.4.3",
         "zustand": "^5.0.14"
     },
     "devDependencies": {

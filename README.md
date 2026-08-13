@@ -18,10 +18,10 @@ Tauri 2 · React 19 · TypeScript · Vite · Tailwind CSS · Zustand · AI SDK �
 ## 开发
 
 ```bash
-bun install      # 安装依赖
-bun run dev      # 启动开发模式
-bun run build    # 类型检查并构建前端
-bun run tauri build  # 打包为原生应用
+pnpm install      # 安装依赖
+pnpm run dev      # 启动开发模式
+pnpm run build    # 类型检查并构建前端
+pnpm run tauri build  # 打包为原生应用
 ```
 
 > 注意：在设置页为 AI 工具选择工作目录后,文件读写与命令执行才会可用。
