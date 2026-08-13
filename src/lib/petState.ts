@@ -1,3 +1,5 @@
+import { StorageKeys, loadJSON, saveJSON } from "./storage";
+
 export type Mood = "neutral" | "happy" | "shy" | "angry" | "sleepy";
 
 export interface PetStats {
@@ -6,27 +8,19 @@ export interface PetStats {
     lastUpdate: number;
 }
 
-const STATS_KEY = "niyun_pet_stats";
 const HUNGER_DECAY_MS = 5 * 60 * 60 * 1000;
 const MOOD_DECAY_MS = 8 * 60 * 60 * 1000;
 
 export function loadStats(): PetStats {
-    try {
-        const raw = localStorage.getItem(STATS_KEY);
-        if (!raw) return { hunger: 80, mood: 80, lastUpdate: Date.now() };
-        const parsed = JSON.parse(raw);
-        return {
-            hunger: parsed.hunger ?? 80,
-            mood: parsed.mood ?? 80,
-            lastUpdate: parsed.lastUpdate ?? Date.now(),
-        };
-    } catch {
-        return { hunger: 80, mood: 80, lastUpdate: Date.now() };
-    }
+    return loadJSON<PetStats>(StorageKeys.petStats, {
+        hunger: 80,
+        mood: 80,
+        lastUpdate: Date.now(),
+    });
 }
 
 export function saveStats(s: PetStats): void {
-    localStorage.setItem(STATS_KEY, JSON.stringify(s));
+    saveJSON(StorageKeys.petStats, s);
 }
 
 export function applyDecay(s: PetStats): PetStats {

@@ -1759,10 +1759,3 @@ export const scenarios: Scenario[] = [
         ],
     },
 ];
-
-export function getAvailableScenarios(
-    hunger: number,
-    mood: number,
-): Scenario[] {
-    return scenarios.filter((s) => !s.condition || s.condition(hunger, mood));
-}

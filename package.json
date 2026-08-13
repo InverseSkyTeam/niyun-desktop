@@ -3,10 +3,10 @@
     "version": "0.1.0",
     "private": true,
     "type": "module",
-    "description": "一款基于 Tauri + Vue 3 的桌面 AI 桌宠应用:多模型对话、桌宠养成、工具审批与剧情模式于一体的轻量原生客户端",
+    "description": "一款基于 Tauri + React 19 的桌面 AI 桌宠应用:多模型对话、桌宠养成、工具审批与剧情模式于一体的轻量原生客户端",
     "scripts": {
         "dev": "vite",
-        "build": "vue-tsc --noEmit && vite build",
+        "build": "tsc --noEmit && vite build",
         "preview": "vite preview",
         "tauri": "tauri",
         "fmt": "oxfmt"
@@ -16,26 +16,36 @@
         "@ai-sdk/deepseek": "^3.0.19",
         "@ai-sdk/moonshotai": "^3.0.23",
         "@ai-sdk/openai": "^4.0.28",
+        "@tailwindcss/typography": "^0.5.20",
         "@tailwindcss/vite": "^4.3.3",
         "@tauri-apps/api": "^2",
+        "@tauri-apps/plugin-autostart": "^2.5.1",
         "@tauri-apps/plugin-http": "^2.5.9",
         "@tauri-apps/plugin-opener": "^2",
         "@tauri-apps/plugin-sql": "^2.4.0",
-        "@types/node": "^26.1.2",
         "ai": "^7.0.48",
         "clsx": "^2.1.1",
+        "lucide-react": "^1.31.0",
+        "react": "^19.2.8",
+        "react-dom": "^19.2.8",
+        "react-markdown": "^10.1.0",
+        "react-router-dom": "^7.18.2",
+        "rehype-highlight": "^7.0.2",
+        "rehype-sanitize": "^6.0.0",
+        "remark-gfm": "^4.0.1",
         "tailwind-merge": "^3.6.0",
         "tailwindcss": "^4.3.3",
-        "uapi-browser-sdk": "^0.1.18",
-        "vue": "^3.5.40",
-        "zhipu-ai-provider": "^0.4.0"
+        "zhipu-ai-provider": "^0.4.0",
+        "zustand": "^5.0.14"
     },
     "devDependencies": {
         "@tauri-apps/cli": "^2",
-        "@vitejs/plugin-vue": "^6.0.8",
+        "@types/node": "^26.1.2",
+        "@types/react": "^19.2.18",
+        "@types/react-dom": "^19.2.4",
+        "@vitejs/plugin-react": "^6.0.5",
         "oxfmt": "^0.61.0",
         "typescript": "^5.9.0",
-        "vite": "^8.2.0",
-        "vue-tsc": "^3.3.9"
+        "vite": "^8.2.0"
     }
 }

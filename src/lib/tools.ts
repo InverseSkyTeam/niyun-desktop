@@ -2,15 +2,22 @@ import { tool } from "ai";
 import { z } from "zod";
 import { invoke } from "@tauri-apps/api/core";
 
+
+export async function pickWorkspace(): Promise<string | null> {
+    return invoke<string | null>("pick_workspace");
+}
+
+export async function getWorkspaceRoot(): Promise<string | null> {
+    return invoke<string | null>("get_workspace_root");
+}
+
 export const readFileTool = tool({
     description:
-        "读取项目中指定文件的内容。适用于查看源代码、配置文件、文档等文本文件。返回文件内容作为字符串。",
+        "读取工作目录中指定文件的内容。适用于查看源代码、配置文件、文档等文本文件。返回文件内容作为字符串。",
     inputSchema: z.object({
         path: z
             .string()
-            .describe(
-                "要读取的文件路径，可以是绝对路径或相对于项目根目录的路径",
-            ),
+            .describe("相对于工作目录的文件路径，例如 src/main.rs"),
     }),
     execute: async ({ path }) => {
         return await invoke<string>("read_file", { path });
@@ -19,13 +26,11 @@ export const readFileTool = tool({
 
 export const writeFileTool = tool({
     description:
-        "将内容写入到指定的文件中。如果文件不存在则创建，如果存在则覆盖。适用于创建新文件或修改现有文件。",
+        "将内容写入到工作目录中的指定文件。如果文件不存在则创建，如果存在则覆盖。适用于创建新文件或修改现有文件。",
     inputSchema: z.object({
         path: z
             .string()
-            .describe(
-                "要写入的文件路径，可以是绝对路径或相对于项目根目录的路径",
-            ),
+            .describe("相对于工作目录的文件路径，例如 src/main.rs"),
         content: z.string().describe("要写入的文件内容"),
     }),
     execute: async ({ path, content }) => {
@@ -35,13 +40,9 @@ export const writeFileTool = tool({
 
 export const listDirectoryTool = tool({
     description:
-        "列出指定目录下的所有文件和子目录。适用于浏览项目结构、查找文件等。返回文件名、是否为目录和文件大小列表。",
+        "列出工作目录下指定目录的所有文件和子目录。适用于浏览项目结构、查找文件等。返回文件名、是否为目录和文件大小列表。",
     inputSchema: z.object({
-        path: z
-            .string()
-            .describe(
-                "要列出的目录路径，可以是绝对路径或相对于项目根目录的路径",
-            ),
+        path: z.string().describe("相对于工作目录的目录路径，空字符串表示根目录"),
     }),
     execute: async ({ path }) => {
         const entries = await invoke<
@@ -59,7 +60,7 @@ export const listDirectoryTool = tool({
 
 export const runCommandTool = tool({
     description:
-        "在终端中执行 shell 命令。适用于运行构建命令、安装依赖、运行测试、git 操作等。注意：命令在项目根目录下执行。",
+        "在工作目录中执行 shell 命令。适用于运行构建命令、安装依赖、运行测试、git 操作等。注意：命令有超时限制，且只能访问工作目录。",
     inputSchema: z.object({
         command: z
             .string()
@@ -74,10 +75,11 @@ export const runCommandTool = tool({
 
 export const getWorkspaceRootTool = tool({
     description:
-        "获取当前项目的根目录路径。用于了解项目所在位置，方便其他工具操作时构造正确的路径。",
+        "获取当前工作目录的路径。用于了解 AI 工具操作的项目根目录在哪。",
     inputSchema: z.object({}),
     execute: async () => {
-        return await invoke<string>("get_workspace_root");
+        const root = await getWorkspaceRoot();
+        return root ?? "尚未设置工作目录";
     },
 });
 
@@ -145,12 +147,14 @@ const PROJECT_KEYWORDS = [
     "shell",
     ".ts",
     ".js",
+    ".tsx",
     ".vue",
     ".css",
     ".json",
     ".md",
     "package.json",
 ];
+
 
 export function looksLikeProjectRequest(text: string): boolean {
     const lower = text.toLowerCase();

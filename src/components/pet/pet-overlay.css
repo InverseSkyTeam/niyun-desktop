@@ -1,0 +1,306 @@
+
+
+.pet-overlay-root {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    pointer-events: none;
+}
+
+.pet-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 180px;
+    height: 198px;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    pointer-events: auto;
+}
+
+.pet-area.squishing {
+    transform: scaleY(0.82) scaleX(1.15);
+    transition: transform 0.1s ease-out;
+}
+
+.pet-stats {
+    position: absolute;
+    bottom: 4px;
+    left: 8px;
+    right: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    pointer-events: none;
+}
+
+.stat {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.stat-icon {
+    font-size: 11px;
+    line-height: 1;
+}
+
+.stat-bar {
+    flex: 1;
+    height: 5px;
+    background: rgba(255, 255, 255, 0.4);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.stat-fill {
+    height: 100%;
+    background: #d4a574;
+    border-radius: 3px;
+    transition: width 0.5s ease;
+}
+
+.stat-fill.mood {
+    background: #c8a8d8;
+}
+
+.pet-mood {
+    width: 100%;
+    height: 100%;
+    transition:
+        filter 0.4s ease,
+        transform 0.4s ease;
+}
+
+.pet-mood.sleeping {
+    filter: brightness(0.55) saturate(0.7);
+}
+
+.pet-mood.low-stat {
+    filter: grayscale(0.4) brightness(0.85);
+}
+
+.pet-mood.mood-happy {
+    filter: brightness(1.08) saturate(1.15);
+    animation: pet-bounce 0.7s ease-in-out;
+}
+
+.pet-mood.mood-shy {
+    filter: hue-rotate(-15deg) saturate(1.4) brightness(1.05);
+    animation: pet-shake 0.5s ease-in-out 2;
+}
+
+.pet-mood.mood-angry {
+    filter: hue-rotate(-25deg) saturate(1.6) brightness(1.08);
+    animation: pet-angry-shake 0.18s ease-in-out infinite;
+}
+
+.pet-mood.mood-sleepy {
+    filter: brightness(0.82) saturate(0.8);
+    animation: pet-slow-breathe 4.5s ease-in-out infinite;
+}
+
+.pet-img {
+    width: 100%;
+    height: 100%;
+    background-image: url("/niyun.png");
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    background-position: center;
+    animation: pet-breathe 3.2s ease-in-out infinite;
+}
+
+.cg-sleep {
+    position: absolute;
+    top: 10px;
+    right: 20px;
+    pointer-events: none;
+}
+
+.zzz {
+    position: absolute;
+    font-size: 14px;
+    font-weight: bold;
+    color: rgba(200, 168, 216, 0.8);
+    animation: float-z 2.4s ease-in-out infinite;
+}
+
+.z1 {
+    animation-delay: 0s;
+    left: 0;
+}
+.z2 {
+    animation-delay: 0.8s;
+    left: 10px;
+    font-size: 18px;
+}
+.z3 {
+    animation-delay: 1.6s;
+    left: 20px;
+    font-size: 16px;
+}
+
+.cg-lowstat {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    pointer-events: none;
+}
+
+.lowstat-icon {
+    font-size: 16px;
+    display: inline-block;
+    animation: shake-icon 0.5s ease-in-out infinite;
+}
+
+.cg-eat {
+    position: absolute;
+    top: 50%;
+    right: -10px;
+    transform: translateY(-50%);
+    pointer-events: none;
+}
+
+.eat-icon {
+    font-size: 22px;
+    display: inline-block;
+    animation: eat-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.eat-icon.bone {
+    animation: bone-fade 0.3s ease-out;
+}
+
+.festival-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 200;
+}
+
+.festival-particle {
+    position: absolute;
+    top: -20px;
+    animation-iteration-count: infinite;
+    animation-timing-function: linear;
+    opacity: 0.9;
+    pointer-events: none;
+}
+
+.weather-overlay {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.weather-particle {
+    position: absolute;
+    top: -24px;
+    animation-iteration-count: infinite;
+    animation-timing-function: linear;
+    opacity: 0.85;
+    line-height: 1;
+    pointer-events: none;
+}
+
+.mood-zero-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    pointer-events: none;
+    z-index: 50;
+    animation: overlay-fade-in 0.8s ease;
+}
+
+.mood-zero-rain {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 51;
+}
+
+.rain-drop {
+    position: absolute;
+    top: -20px;
+    animation: rain-fall linear infinite;
+    opacity: 0.7;
+    line-height: 1;
+}
+
+.context-menu {
+    position: absolute;
+    z-index: 100;
+    width: 130px;
+    background: rgba(250, 245, 240, 0.96);
+    border: 1px solid rgba(212, 165, 116, 0.5);
+    border-radius: 10px;
+    padding: 4px;
+    box-shadow: 0 6px 20px rgba(212, 165, 116, 0.2);
+    pointer-events: auto;
+}
+
+.menu-item {
+    width: 100%;
+    padding: 8px 0;
+    border: none;
+    border-radius: 7px;
+    background: transparent;
+    color: #5c4a3d;
+    font-size: 14px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.12s ease;
+}
+
+.menu-item:hover {
+    background: rgba(212, 165, 116, 0.25);
+}
+
+.pet-speech {
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 12px);
+    transform: translateX(-50%);
+    max-width: 210px;
+    padding: 8px 12px;
+    background: rgba(255, 250, 245, 0.96);
+    border: 1px solid rgba(199, 175, 220, 0.5);
+    border-radius: 14px;
+    box-shadow: 0 4px 14px rgba(140, 107, 230, 0.16);
+    font-size: 13px;
+    line-height: 1.5;
+    color: #5a4a6a;
+    word-break: break-word;
+    white-space: pre-wrap;
+    pointer-events: auto;
+    z-index: 60;
+    animation: speech-pop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.speech-tail {
+    position: absolute;
+    left: 50%;
+    bottom: -8px;
+    transform: translateX(-50%);
+    border-left: 7px solid transparent;
+    border-right: 7px solid transparent;
+    border-top: 8px solid rgba(255, 250, 245, 0.96);
+}
+
+@keyframes speech-pop {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) scale(0.8);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) scale(1);
+    }
+}

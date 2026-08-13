@@ -4,67 +4,17 @@ import {
     type ModelMessage,
     type ToolApprovalResponse,
 } from "ai";
-import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
-import type { AIProviderConfig, AIConfig } from "./types";
+import type { AIConfig } from "./types";
 import { createDefaultAIConfig } from "./types";
-
-const aiFetch: typeof fetch =
-    typeof window !== "undefined" && "__TAURI_INTERNALS__" in window
-        ? tauriFetch
-        : window.fetch.bind(window);
-
-const STORAGE_KEY = "ai-config";
+import { StorageKeys, loadJSON, saveJSON } from "./storage";
+import { getProvider } from "./providers";
 
 export function loadAIConfig(): AIConfig {
-    try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (raw) return JSON.parse(raw) as AIConfig;
-    } catch {}
-    return createDefaultAIConfig();
+    return loadJSON<AIConfig>(StorageKeys.aiConfig, createDefaultAIConfig());
 }
 
 export function saveAIConfig(config: AIConfig): void {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
-}
-
-async function createProvider(config: AIProviderConfig) {
-    const opts = {
-        apiKey: config.apiKey,
-        baseURL: config.baseUrl,
-        fetch: aiFetch,
-    };
-    switch (config.id) {
-        case "deepseek": {
-            const { createDeepSeek } = await import("@ai-sdk/deepseek");
-            return createDeepSeek(opts);
-        }
-        case "zhipu": {
-            const { createZhipu } = await import("zhipu-ai-provider");
-            return createZhipu(opts);
-        }
-        case "moonshot": {
-            const { createMoonshotAI } = await import("@ai-sdk/moonshotai");
-            return createMoonshotAI(opts);
-        }
-        case "openai": {
-            const { createOpenAI } = await import("@ai-sdk/openai");
-            return createOpenAI(opts);
-        }
-        case "anthropic": {
-            const { createAnthropic } = await import("@ai-sdk/anthropic");
-            return createAnthropic(opts);
-        }
-    }
-}
-
-async function getProvider(activeModel: string) {
-    const config = loadAIConfig();
-    const [providerId, modelId] = activeModel.split(":");
-    const providerConfig = config.providers.find((p) => p.id === providerId);
-    if (!providerConfig) throw new Error(`未找到 AI 厂商: ${providerId}`);
-    const provider = await createProvider(providerConfig);
-    if (!provider) throw new Error(`不支持的 AI 厂商: ${providerId}`);
-    return { provider, modelId, systemPrompt: "" };
+    saveJSON(StorageKeys.aiConfig, config);
 }
 
 export async function generateReply(
@@ -72,7 +22,7 @@ export async function generateReply(
     activeModel: string,
     systemPrompt?: string,
 ): Promise<string> {
-    const { provider, modelId } = await getProvider(activeModel);
+    const { provider, modelId } = await getProvider(activeModel, loadAIConfig());
     const result = streamText({
         model: provider(modelId),
         system: systemPrompt,
@@ -98,11 +48,29 @@ export type AIChatMessage = {
     content: string | unknown[];
 };
 
-async function collectGenerateResult(
+interface StreamRequestOptions {
+    system?: string;
+    messages: ModelMessage[];
+    tools?: ToolSet;
+    toolApproval?: Record<string, "user-approval">;
+    abortSignal?: AbortSignal;
+}
+
+
+async function createStreamRequest(
+    activeModel: string,
+    options: StreamRequestOptions,
+): Promise<ReturnType<typeof streamText>> {
+    const { provider, modelId } = await getProvider(activeModel, loadAIConfig());
+    return streamText({ model: provider(modelId), ...options });
+}
+
+
+async function collectTextAndReasoning(
     result: ReturnType<typeof streamText>,
     onChunk?: (chunk: string) => void,
     onReasoning?: (chunk: string) => void,
-): Promise<GenerateResult> {
+): Promise<string> {
     let fullText = "";
     for await (const part of result.stream) {
         if (part.type === "text-delta") {
@@ -112,54 +80,82 @@ async function collectGenerateResult(
             onReasoning?.(part.text);
         }
     }
+    return fullText;
+}
 
-    const steps = await result.steps;
-    const approvals: ApprovalRequest[] = [];
+type StreamStep = Awaited<ReturnType<typeof streamText>["steps"]>[number];
+type StreamStepPart = StreamStep["content"][number];
 
-    for (const step of steps) {
-        for (const part of step.content) {
-            if (part.type === "tool-approval-request" && !part.isAutomatic) {
-                approvals.push({
-                    approvalId: part.approvalId,
-                    toolName: part.toolCall.toolName,
-                    input: part.toolCall.input,
-                });
-            }
-        }
+function isApprovalPart(
+    part: StreamStepPart,
+): part is Extract<StreamStepPart, { type: "tool-approval-request" }> {
+    return part.type === "tool-approval-request" && !part.isAutomatic;
+}
+
+
+function collectApprovals(steps: StreamStep[]): ApprovalRequest[] {
+    return steps
+        .flatMap((step) => step.content)
+        .filter(isApprovalPart)
+        .map((part) => ({
+            approvalId: part.approvalId,
+            toolName: part.toolCall.toolName,
+            input: part.toolCall.input,
+        }));
+}
+
+function resolveToolCallId(part: StreamStepPart): string | undefined {
+    const raw = part as unknown as {
+        toolCallId?: string;
+        toolCall?: { toolCallId?: string };
+    };
+    return raw.toolCallId ?? raw.toolCall?.toolCallId;
+}
+
+
+function serializeStepPart(part: StreamStepPart): unknown {
+    if (part.type === "tool-approval-request") {
+        return {
+            type: "tool-approval-request",
+            approvalId: part.approvalId,
+            toolCallId: resolveToolCallId(part),
+        };
     }
+    if (part.type === "tool-call") {
+        return {
+            type: "tool-call",
+            toolCallId: part.toolCallId,
+            toolName: part.toolName,
+            input: part.input,
+        };
+    }
+    if (part.type === "text") {
+        return { type: "text", text: part.text };
+    }
+    return null;
+}
 
-    const assistantMessages: AIChatMessage[] = steps.map((step) => ({
+function buildAssistantMessages(steps: StreamStep[]): AIChatMessage[] {
+    return steps.map((step) => ({
         role: "assistant",
         content: step.content
-            .map((part) => {
-                if (part.type === "tool-approval-request") {
-                    const raw = part as unknown as {
-                        toolCallId?: string;
-                        toolCall?: { toolCallId?: string };
-                    };
-                    return {
-                        type: "tool-approval-request",
-                        approvalId: part.approvalId,
-                        toolCallId: raw.toolCallId ?? raw.toolCall?.toolCallId,
-                    };
-                }
-                if (part.type === "tool-call") {
-                    return {
-                        type: "tool-call",
-                        toolCallId: part.toolCallId,
-                        toolName: part.toolName,
-                        input: part.input,
-                    };
-                }
-                if (part.type === "text") {
-                    return { type: "text", text: part.text };
-                }
-                return null;
-            })
-            .filter((p): p is NonNullable<typeof p> => p !== null) as unknown[],
+            .map(serializeStepPart)
+            .filter((p): p is NonNullable<typeof p> => p !== null),
     }));
+}
 
-    return { text: fullText, approvals, assistantMessages };
+async function collectGenerateResult(
+    result: ReturnType<typeof streamText>,
+    onChunk?: (chunk: string) => void,
+    onReasoning?: (chunk: string) => void,
+): Promise<GenerateResult> {
+    const fullText = await collectTextAndReasoning(result, onChunk, onReasoning);
+    const steps = await result.steps;
+    return {
+        text: fullText,
+        approvals: collectApprovals(steps),
+        assistantMessages: buildAssistantMessages(steps),
+    };
 }
 
 export async function generateWithTools(
@@ -172,9 +168,7 @@ export async function generateWithTools(
     onReasoning?: (chunk: string) => void,
     abortSignal?: AbortSignal,
 ): Promise<GenerateResult> {
-    const { provider, modelId } = await getProvider(activeModel);
-    const result = streamText({
-        model: provider(modelId),
+    const result = await createStreamRequest(activeModel, {
         system: systemPrompt,
         messages: messages as ModelMessage[],
         tools,
@@ -196,9 +190,7 @@ export async function continueWithApprovals(
     onReasoning?: (chunk: string) => void,
     abortSignal?: AbortSignal,
 ): Promise<GenerateResult> {
-    const { provider, modelId } = await getProvider(activeModel);
-    const result = streamText({
-        model: provider(modelId),
+    const result = await createStreamRequest(activeModel, {
         system: systemPrompt,
         messages: [
             ...messages,
