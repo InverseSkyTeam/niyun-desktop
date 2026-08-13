@@ -46,7 +46,7 @@ export interface AIConfig {
 
 export function createDefaultAIConfig(): AIConfig {
     return {
-        activeModel: "deepseek:deepseek-v4-flash",
+        activeModel: "deepseek:deepseek-chat",
         providers: [
             {
                 id: "deepseek",
@@ -56,13 +56,13 @@ export function createDefaultAIConfig(): AIConfig {
                 enabled: true,
                 models: [
                     {
-                        id: "deepseek-v4-flash",
-                        name: "Deepseek V4 Flash",
+                        id: "deepseek-chat",
+                        name: "Deepseek Chat",
                         enabled: true,
                     },
                     {
-                        id: "deepseek-v4-pro",
-                        name: "Deepseek V4 Pro",
+                        id: "deepseek-reasoner",
+                        name: "Deepseek Reasoner",
                         enabled: false,
                     },
                 ],
@@ -142,32 +142,4 @@ export interface ToolApprovalRequest {
     toolName: string;
     input: unknown;
     approvalId: string;
-}
-
-export function getEnabledModels(config: AIConfig): {
-    providerId: AIProviderId;
-    providerName: string;
-    modelId: string;
-    modelName: string;
-}[] {
-    const result: {
-        providerId: AIProviderId;
-        providerName: string;
-        modelId: string;
-        modelName: string;
-    }[] = [];
-    for (const p of config.providers) {
-        if (!p.enabled) continue;
-        for (const m of p.models) {
-            if (m.enabled) {
-                result.push({
-                    providerId: p.id,
-                    providerName: p.name,
-                    modelId: m.id,
-                    modelName: m.name,
-                });
-            }
-        }
-    }
-    return result;
 }

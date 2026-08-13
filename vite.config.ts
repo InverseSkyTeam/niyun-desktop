@@ -1,12 +1,30 @@
 import { defineConfig } from "vite";
-import vue from "@vitejs/plugin-vue";
+import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { fileURLToPath } from "node:url";
 
 const host = process.env.TAURI_DEV_HOST;
 
+function splitVendorChunks(id: string): string | undefined {
+    if (
+        id.includes("node_modules/react") ||
+        id.includes("node_modules/react-dom") ||
+        id.includes("node_modules/zustand") ||
+        id.includes("node_modules/react-router")
+    ) {
+        return "react";
+    }
+    if (
+        id.includes("node_modules/ai") ||
+        id.includes("node_modules/@tauri-apps/plugin-http")
+    ) {
+        return "ai";
+    }
+    return undefined;
+}
+
 export default defineConfig(async () => ({
-    plugins: [vue(), tailwindcss()],
+    plugins: [react(), tailwindcss()],
     resolve: {
         alias: {
             "@": fileURLToPath(new URL("./src", import.meta.url)),
@@ -32,20 +50,7 @@ export default defineConfig(async () => ({
     build: {
         rollupOptions: {
             output: {
-                manualChunks(id: string) {
-                    if (
-                        id.includes("node_modules/vue") ||
-                        id.includes("node_modules/@vue")
-                    ) {
-                        return "vue";
-                    }
-                    if (
-                        id.includes("node_modules/ai") ||
-                        id.includes("node_modules/@tauri-apps/plugin-http")
-                    ) {
-                        return "ai";
-                    }
-                },
+                manualChunks: splitVendorChunks,
             },
         },
     },

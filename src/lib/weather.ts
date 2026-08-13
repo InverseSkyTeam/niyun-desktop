@@ -1,9 +1,11 @@
-import { UapiClient } from "uapi-browser-sdk";
+import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 
-const uapi = new UapiClient(
-    "https://uapis.cn",
-    "uapi-_ibhj0ggpbpLj0AHTvsiGbFjxsyP_D3TOJg3ryUI",
-);
+const aiFetch: typeof fetch =
+    typeof window !== "undefined" && "__TAURI_INTERNALS__" in window
+        ? tauriFetch
+        : window.fetch.bind(window);
+
+const WTTR_ENDPOINT = "https://wttr.in/?format=j1";
 
 export type WeatherKind =
     | "clear"
@@ -55,59 +57,41 @@ export interface WeatherSnapshot {
     fetchedAt: number;
 }
 
-interface RawWeatherResponse {
-    city?: string;
-    district?: string;
-    adcode?: string;
-    weather?: string;
-    weather_icon?: number | string;
-    temperature?: number;
-    wind_direction?: string;
-    wind_power?: string;
-    humidity?: number;
-    report_time?: string;
-    precipitation?: number;
-}
 
-function classifyByIcon(icon: number): WeatherKind {
-    if (icon === 100) return "clear";
-    if (icon >= 101 && icon <= 103) return "cloudy";
-    if (icon >= 104 && icon <= 213) return "cloudy";
-    if (icon === 301 || (icon >= 305 && icon <= 318)) return "rain";
-    if (icon === 302 || icon === 303 || icon === 304) return "thunder";
-    if (icon === 399) return "rain";
-    if ((icon >= 400 && icon <= 408) || icon === 499) return "snow";
-    if (icon >= 500 && icon <= 515) return "fog";
-    if (icon >= 900) return "sandstorm";
+function classifyByWmoCode(code: number): WeatherKind {
+    if (code === 113) return "clear";
+    if (code >= 116 && code <= 122) return "cloudy";
+    if (code === 143 || code === 248 || code === 260) return "fog";
+    if (code === 200 || (code >= 386 && code <= 395)) return "thunder";
+    if (code === 176 || (code >= 263 && code <= 284) || (code >= 293 && code <= 314) || (code >= 353 && code <= 359)) {
+        return "rain";
+    }
+    if ((code >= 179 && code <= 182) || (code >= 227 && code <= 230) || (code >= 317 && code <= 350) || (code >= 362 && code <= 377)) {
+        return "snow";
+    }
     return "unknown";
 }
 
 function classifyByText(text: string): WeatherKind {
-    const t = text.trim();
+    const t = text.trim().toLowerCase();
     if (!t) return "unknown";
-    if (t.includes("雷") || t.includes("闪电")) return "thunder";
-    if (t.includes("雪")) return "snow";
-    if (t.includes("雨")) return "rain";
-    if (
-        t.includes("雾") ||
-        t.includes("霾") ||
-        t.includes("沙") ||
-        t.includes("扬")
-    )
-        return "fog";
-    if (t.includes("阴") || t.includes("云")) return "cloudy";
-    if (t.includes("晴")) return "clear";
+    if (/thunder|雷|闪电/.test(t)) return "thunder";
+    if (/snow|sleet|blizzard|冰雹|雪/.test(t)) return "snow";
+    if (/rain|drizzle|雨/.test(t)) return "rain";
+    if (/fog|mist|haze|雾|霾|沙|扬/.test(t)) return "fog";
+    if (/overcast|cloudy|阴|云/.test(t)) return "cloudy";
+    if (/sunny|clear|晴/.test(t)) return "clear";
     return "unknown";
 }
 
 export function classifyWeather(
     weatherText: string,
-    icon: number | string | undefined,
+    wmoCode: number | string | undefined,
 ): WeatherKind {
-    if (icon !== undefined) {
-        const n = typeof icon === "string" ? parseInt(icon, 10) : icon;
+    if (wmoCode !== undefined) {
+        const n = typeof wmoCode === "string" ? parseInt(wmoCode, 10) : wmoCode;
         if (!Number.isNaN(n)) {
-            const k = classifyByIcon(n);
+            const k = classifyByWmoCode(n);
             if (k !== "unknown") return k;
         }
     }
@@ -173,30 +157,51 @@ const KIND_CONFIG: Record<
     },
 };
 
-function buildSummary(raw: RawWeatherResponse): WeatherSummary | null {
-    if (!raw.weather && raw.temperature === undefined) return null;
+
+interface WttrResponse {
+    current_condition?: {
+        weatherCode?: string;
+        weatherDesc?: { value?: string }[];
+        temp_C?: string;
+        humidity?: string;
+        winddir16Point?: string;
+        windspeedKmph?: string;
+        observation_time?: string;
+    }[];
+    nearest_area?: {
+        areaName?: { value?: string }[];
+        region?: { value?: string }[];
+    }[];
+}
+
+function parseWttr(data: WttrResponse): { summary: WeatherSummary | null; kind: WeatherKind } {
+    const cur = data.current_condition?.[0];
+    const area = data.nearest_area?.[0];
+    if (!cur || (cur.temp_C === undefined && !cur.weatherDesc?.[0]?.value)) {
+        return { summary: null, kind: "unknown" };
+    }
+    const weatherText = cur.weatherDesc?.[0]?.value ?? "未知";
+    const code = cur.weatherCode !== undefined ? parseInt(cur.weatherCode, 10) : undefined;
+    const kind = classifyWeather(weatherText, code);
+    const city = area?.areaName?.[0]?.value || area?.region?.[0]?.value || "未知城市";
+    const temperature = cur.temp_C !== undefined ? Number(cur.temp_C) : Number.NaN;
     return {
-        city: raw.city || raw.district || "未知城市",
-        weather: raw.weather || "未知",
-        temperature:
-            typeof raw.temperature === "number"
-                ? raw.temperature
-                : Number(raw.temperature ?? NaN),
-        wind_direction: raw.wind_direction || "",
-        wind_power: raw.wind_power || "",
-        humidity:
-            typeof raw.humidity === "number"
-                ? raw.humidity
-                : Number(raw.humidity ?? NaN),
-        report_time: raw.report_time || "",
+        summary: {
+            city,
+            weather: weatherText,
+            temperature,
+            wind_direction: cur.winddir16Point || "",
+            wind_power: cur.windspeedKmph ? `${cur.windspeedKmph}km/h` : "",
+            humidity: cur.humidity !== undefined ? Number(cur.humidity) : Number.NaN,
+            report_time: cur.observation_time || "",
+        },
+        kind,
     };
 }
 
-function buildCG(raw: RawWeatherResponse, kind: WeatherKind): WeatherCG | null {
-    if (kind === "unknown" || !KIND_CONFIG[kind].particle) return null;
+function buildCG(summary: WeatherSummary | null, kind: WeatherKind): WeatherCG | null {
+    if (!summary || kind === "unknown" || !KIND_CONFIG[kind].particle) return null;
     const cfg = KIND_CONFIG[kind];
-    const summary = buildSummary(raw);
-    if (!summary) return null;
     const tempDesc =
         summary.temperature >= 30
             ? "热得发昏"
@@ -210,31 +215,25 @@ function buildCG(raw: RawWeatherResponse, kind: WeatherKind): WeatherCG | null {
     return {
         kind,
         label: cfg.label,
-        description: `${summary.city}：${summary.weather}，${summary.temperature}°C（${tempDesc}）`,
+        description: `${summary.city}：${cfg.label}，${Math.round(summary.temperature)}°C（${tempDesc}）`,
         particle: cfg.particle,
         count: cfg.count,
         animation: cfg.animation,
         city: summary.city,
         temperature: summary.temperature,
-        weather: summary.weather,
+        weather: cfg.label,
     };
 }
 
 export async function fetchWeather(): Promise<WeatherSnapshot> {
     try {
-        const data = await uapi.misc.getMiscWeather({
-            extended: false,
-            forecast: false,
-            hourly: false,
-            minutely: false,
-            indices: false,
-            lang: "zh",
-        });
-        const raw = data as unknown as RawWeatherResponse;
-        const kind = classifyWeather(raw.weather ?? "", raw.weather_icon);
+        const res = await aiFetch(WTTR_ENDPOINT);
+        if (!res.ok) throw new Error(`wttr.in HTTP ${res.status}`);
+        const data = (await res.json()) as WttrResponse;
+        const { summary, kind } = parseWttr(data);
         return {
-            summary: buildSummary(raw),
-            cg: buildCG(raw, kind),
+            summary,
+            cg: buildCG(summary, kind),
             fetchedAt: Date.now(),
         };
     } catch {

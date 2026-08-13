@@ -1,11 +1,15 @@
 import Database from "@tauri-apps/plugin-sql";
 import type { ChatMessage, Conversation } from "./types";
+import { isTauri } from "./tauri";
 
 let db: Database | null = null;
 
 const DB_PATH = "sqlite:niyun.db";
 
 async function getDb(): Promise<Database> {
+    if (!isTauri()) {
+        throw new Error("数据库仅支持在 Tauri 环境中使用");
+    }
     if (db) return db;
     db = await Database.load(DB_PATH);
     await initTables();
@@ -61,32 +65,8 @@ export async function createConversation(
     );
 }
 
-export async function updateConversation(
-    id: string,
-    data: { title?: string; systemPrompt?: string },
-): Promise<void> {
-    const d = await getDb();
-    const sets: string[] = [];
-    const params: unknown[] = [];
-    if (data.title !== undefined) {
-        sets.push("title = $" + (params.length + 1));
-        params.push(data.title);
-    }
-    if (data.systemPrompt !== undefined) {
-        sets.push("system_prompt = $" + (params.length + 1));
-        params.push(data.systemPrompt);
-    }
-    if (sets.length === 0) return;
-    params.push(id);
-    await d.execute(
-        `UPDATE conversations SET ${sets.join(", ")} WHERE id = $${params.length}`,
-        params,
-    );
-}
-
 export async function removeConversation(id: string): Promise<void> {
     const d = await getDb();
-    await d.execute("DELETE FROM messages WHERE conversation_id = $1", [id]);
     await d.execute("DELETE FROM conversations WHERE id = $1", [id]);
 }
 
@@ -136,6 +116,20 @@ export async function updateMessage(
     ]);
 }
 
+
+export async function deleteMessages(
+    conversationId: string,
+    ids: string[],
+): Promise<void> {
+    const d = await getDb();
+    for (const id of ids) {
+        await d.execute(
+            "DELETE FROM messages WHERE conversation_id = $1 AND id = $2",
+            [conversationId, id],
+        );
+    }
+}
+
 export async function getSystemPrompt(conversationId: string): Promise<string> {
     const d = await getDb();
     const rows = await d.select<Record<string, unknown>[]>(
@@ -144,11 +138,4 @@ export async function getSystemPrompt(conversationId: string): Promise<string> {
     );
     if (rows.length > 0) return (rows[0].system_prompt as string) || "";
     return "";
-}
-
-export async function setSystemPrompt(
-    conversationId: string,
-    prompt: string,
-): Promise<void> {
-    await updateConversation(conversationId, { systemPrompt: prompt });
 }

@@ -30,15 +30,15 @@ export function getFestival(): FestivalConfig | null {
     return null;
 }
 
-export function generateParticles(
-    config: FestivalConfig,
-): { left: number; delay: number; duration: number; size: number }[] {
-    const particles: {
-        left: number;
-        delay: number;
-        duration: number;
-        size: number;
-    }[] = [];
+export interface Particle {
+    left: number;
+    delay: number;
+    duration: number;
+    size: number;
+}
+
+export function generateParticles(config: FestivalConfig): Particle[] {
+    const particles: Particle[] = [];
     for (let i = 0; i < config.count; i++) {
         particles.push({
             left: Math.random() * 100,
